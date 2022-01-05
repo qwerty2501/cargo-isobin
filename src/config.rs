@@ -16,6 +16,7 @@ pub struct InstallDependencies {
 }
 
 impl ToolConfig {
+    #[allow(dead_code)]
     pub fn from_path(path: impl AsRef<Path>) -> Result<ToolConfig> {
         let mut file = File::open(path.as_ref())?;
         let mut content = String::new();
@@ -31,8 +32,6 @@ impl ToolConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(test)]
-    use pretty_assertions::assert_eq;
 
     #[fixture]
     fn cargos() -> Vec<(String, toml::Value)> {
@@ -94,7 +93,7 @@ mod tests {
         let result = ToolConfig::from_str(config_toml_str);
         match result {
             Ok(actual) => {
-                self::assert_eq!(expected, actual);
+                pretty_assertions::assert_eq!(expected, actual);
             }
             Err(err) => {
                 panic!("{}", err);

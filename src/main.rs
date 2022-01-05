@@ -9,9 +9,6 @@ use std::path::PathBuf;
 #[cfg(test)]
 use rstest::*;
 
-#[cfg(test)]
-use pretty_assertions::{assert_eq, assert_ne};
-
 #[derive(Parser)]
 #[clap(author, version, about)]
 struct Args {
@@ -33,7 +30,7 @@ impl App {
     fn new() -> Self {
         Self {}
     }
-    fn run(&self, args: Args) -> Result<()> {
+    fn run(&self, _args: Args) -> Result<()> {
         Err(Errors::Test().into())
     }
 }
