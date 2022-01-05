@@ -9,3 +9,8 @@ node_modules/
 #/target
 Cargo.lock
 .local/
+
+
+# Added by cargo
+
+/target
