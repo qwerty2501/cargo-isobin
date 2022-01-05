@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -eu
+
+
+if [ ! -v PREPARE_LOADED ]; then
+	export PREPARE_LOADED=true
+	export ROOT=$(cd $(dirname ${BASH_SOURCE:-$0})/..; pwd)
+	source $ROOT/scripts/environment
+fi
+cd $ROOT

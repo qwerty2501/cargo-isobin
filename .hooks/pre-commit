@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+
+scripts/git/hooks/utils/runner.sh scripts/git/hooks/pre-commit

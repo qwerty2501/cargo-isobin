@@ -1,0 +1,38 @@
+#!/bin/sh
+set -eu
+
+wd=$(dirname $0)/..
+cd $wd
+remote="$1"
+url="$2"
+
+z40=0000000000000000000000000000000000000000
+
+export GIT_HOOKS_REMOTE="$remote"
+export GIT_HOOKS_URL="$url"
+while read local_ref local_sha remote_ref remote_sha
+do
+	if [ "$local_sha" = $z40 ]
+	then
+		# Handle delete
+		:
+	else
+		if [ "$remote_sha" = $z40 ]
+		then
+			range="$local_sha"
+		else
+			range="$remote_sha..$local_sha"
+		fi
+	fi
+	export GIT_HOOKS_LOCAL_REF="$local_ref"
+	export GIT_HOOKS_LOCAL_SHA="$local_sha"
+	export GIT_HOOKS_REMOTE_REF="$remote_ref"
+	export GIT_HOOKS_REMOTE_SHA="$remote_sha"
+	export GIT_HOOKS_SHA_RANGE="$range"
+	scripts/git/hooks/utils/runner.sh scripts/git/hooks/pre-push
+done
+
+exit 0
+
+
+

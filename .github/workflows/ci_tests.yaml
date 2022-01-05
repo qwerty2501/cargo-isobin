@@ -1,0 +1,22 @@
+name: CARRIAGE
+on: [push]
+jobs:
+  rust-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - run: scripts/lint/lint_rust.sh
+
+  rust-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - run: scripts/test/test_rust.sh
+env:
+  CARGO_TERM_COLOR: always
