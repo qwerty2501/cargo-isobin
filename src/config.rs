@@ -1,30 +1,29 @@
+use std::collections::HashMap;
 use std::io::Read;
 use std::{fs::File, path::Path};
 
 use super::*;
 use serde_derive::{Deserialize, Serialize};
 
+pub use cargo_toml::Dependency as InstallDependency;
+pub use cargo_toml::DependencyDetail as InstallDependencyDetail;
+
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
-pub struct ToolConfig {
+pub struct InstallConfig {
     #[serde(rename = "install-dependencies")]
-    install_dependencies: InstallDependencies,
+    install_dependencies: HashMap<String, InstallDependency>,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
-pub struct InstallDependencies {
-    cargo: toml::value::Table,
-}
-
-impl ToolConfig {
+impl InstallConfig {
     #[allow(dead_code)]
-    pub fn from_path(path: impl AsRef<Path>) -> Result<ToolConfig> {
+    pub fn from_path(path: impl AsRef<Path>) -> Result<InstallConfig> {
         let mut file = File::open(path.as_ref())?;
         let mut content = String::new();
         file.read_to_string(&mut content)?;
         Self::from_str(&content)
     }
-    fn from_str(s: &str) -> Result<ToolConfig> {
-        let tool_config: ToolConfig = toml::from_str(s)?;
+    fn from_str(s: &str) -> Result<InstallConfig> {
+        let tool_config: InstallConfig = toml::from_str(s)?;
         Ok(tool_config)
     }
 }
@@ -34,10 +33,10 @@ mod tests {
     use super::*;
 
     #[fixture]
-    fn cargos() -> Vec<(String, toml::Value)> {
+    fn install_dependencies() -> Vec<(String, InstallDependency)> {
         [
-            ("comrak", toml::Value::String("1.0".into())),
-            ("cargo-make", toml::Value::String("2.0".into())),
+            ("comrak", InstallDependency::Simple("1.0".into())),
+            ("cargo-make", InstallDependency::Simple("2.0".into())),
         ]
         .into_iter()
         .map(|(name, v)| (name.to_string(), v))
@@ -45,40 +44,48 @@ mod tests {
     }
 
     #[fixture]
-    fn tool_config(cargos: Vec<(String, toml::Value)>) -> ToolConfig {
-        ToolConfig {
-            install_dependencies: InstallDependencies {
-                cargo: cargos.into_iter().collect(),
-            },
+    fn tool_config(install_dependencies: Vec<(String, InstallDependency)>) -> InstallConfig {
+        InstallConfig {
+            install_dependencies: install_dependencies.into_iter().collect(),
         }
     }
 
     #[fixture]
-    fn table_cargos() -> Vec<(String, toml::Value)> {
+    fn table_cargos() -> Vec<(String, InstallDependency)> {
         [
             (
                 "comrak",
-                toml::Value::Table(
-                    [
-                        ("version", toml::Value::String("1.0".into())),
-                        (
-                            "git",
-                            toml::Value::String("git@github.com:kivikakk/comrak.git".into()),
-                        ),
-                    ]
-                    .into_iter()
-                    .map(|(name, v)| (name.to_string(), v))
-                    .collect(),
-                ),
+                InstallDependency::Detailed(InstallDependencyDetail {
+                    version: Some("1.0".into()),
+                    registry: None,
+                    registry_index: None,
+                    path: None,
+                    git: Some("git@github.com:kivikakk/comrak.git".into()),
+                    branch: None,
+                    tag: None,
+                    rev: None,
+                    features: vec![],
+                    optional: false,
+                    default_features: None,
+                    package: None,
+                }),
             ),
             (
                 "cargo-make",
-                toml::Value::Table(
-                    [("version", toml::Value::String("2.0".into()))]
-                        .into_iter()
-                        .map(|(name, v)| (name.to_string(), v))
-                        .collect(),
-                ),
+                InstallDependency::Detailed(InstallDependencyDetail {
+                    version: Some("2.0".into()),
+                    registry: None,
+                    registry_index: None,
+                    path: None,
+                    git: None,
+                    branch: None,
+                    tag: None,
+                    rev: None,
+                    features: vec![],
+                    optional: false,
+                    default_features: None,
+                    package: None,
+                }),
             ),
         ]
         .into_iter()
@@ -87,10 +94,10 @@ mod tests {
     }
 
     #[rstest]
-    #[case(tool_config(cargos()),include_str!("testdata/tool_config_from_str_works/default_load.toml"))]
+    #[case(tool_config(install_dependencies()),include_str!("testdata/tool_config_from_str_works/default_load.toml"))]
     #[case(tool_config(table_cargos()),include_str!("testdata/tool_config_from_str_works/description_load.toml"))]
-    fn tool_config_from_str_works(#[case] expected: ToolConfig, #[case] config_toml_str: &str) {
-        let result = ToolConfig::from_str(config_toml_str);
+    fn tool_config_from_str_works(#[case] expected: InstallConfig, #[case] config_toml_str: &str) {
+        let result = InstallConfig::from_str(config_toml_str);
         match result {
             Ok(actual) => {
                 pretty_assertions::assert_eq!(expected, actual);
