@@ -1,7 +1,7 @@
 mod config;
 mod errors;
 
-use errors::*;
+pub use errors::*;
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -11,7 +11,7 @@ use rstest::*;
 
 #[derive(Parser)]
 #[clap(author, version, about)]
-struct Args {
+pub struct Args {
     /// Sets a custom config file
     #[clap(short, long, parse(from_os_str), value_name = "FILE")]
     config: Option<PathBuf>,
@@ -20,24 +20,15 @@ struct Args {
 }
 
 #[derive(Subcommand)]
-enum SubCommands {
+pub enum SubCommands {
     Install {},
 }
 
-struct App;
+#[derive(Default)]
+pub struct App;
 
 impl App {
-    fn new() -> Self {
-        Self {}
-    }
-    fn run(&self, _args: Args) -> Result<()> {
+    pub fn run(&self, _args: Args) -> Result<()> {
         Err(Errors::Test().into())
     }
-}
-
-fn main() -> Result<()> {
-    let app = App::new();
-
-    let args = Args::parse();
-    app.run(args)
 }
