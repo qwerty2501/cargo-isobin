@@ -1,4 +1,4 @@
-use cargo_isobin::*;
+use isobin::*;
 
 use clap::Parser;
 

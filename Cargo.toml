@@ -1,5 +1,5 @@
 [package]
-name = "cargo-isobin"
+name = "isobin"
 version = "0.1.0"
 edition = "2021"
 
@@ -21,4 +21,4 @@ rstest = "0.12.0"
 
 [[bin]]
 name = "cargo-isobin"
-path = "src/bin/cargo_isobin/main.rs"
+path = "src/bin/isobin/main.rs"
