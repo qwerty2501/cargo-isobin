@@ -1,10 +1,10 @@
-use isobin::*;
+use isobin::isobin::*;
 
 use clap::Parser;
 
 fn main() -> Result<()> {
-    let app = App::default();
+    let app = Application::default();
 
-    let args = Args::parse();
+    let args = Arguments::parse();
     app.run(args)
 }

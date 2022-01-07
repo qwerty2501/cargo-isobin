@@ -1,8 +1,8 @@
+use super::*;
 use std::collections::HashMap;
 use std::io::Read;
 use std::{fs::File, path::Path};
 
-use super::*;
 use serde_derive::{Deserialize, Serialize};
 
 pub use cargo_toml::Dependency as InstallDependency;
