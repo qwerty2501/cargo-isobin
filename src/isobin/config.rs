@@ -59,46 +59,24 @@ mod tests {
     }
 
     #[fixture]
+    #[allow(clippy::field_reassign_with_default)]
     fn table_cargos() -> Vec<(String, CargoInstallDependency)> {
-        [
-            (
-                "comrak",
-                CargoInstallDependency::Detailed(CargoInstallDependencyDetail {
-                    version: Some("1.0".into()),
-                    registry: None,
-                    registry_index: None,
-                    path: None,
-                    git: Some("git@github.com:kivikakk/comrak.git".into()),
-                    branch: None,
-                    tag: None,
-                    rev: None,
-                    features: vec![],
-                    optional: false,
-                    default_features: None,
-                    package: None,
-                }),
-            ),
-            (
-                "cargo-make",
-                CargoInstallDependency::Detailed(CargoInstallDependencyDetail {
-                    version: Some("2.0".into()),
-                    registry: None,
-                    registry_index: None,
-                    path: None,
-                    git: None,
-                    branch: None,
-                    tag: None,
-                    rev: None,
-                    features: vec![],
-                    optional: false,
-                    default_features: None,
-                    package: None,
-                }),
-            ),
-        ]
-        .into_iter()
-        .map(|(name, v)| (name.to_string(), v))
-        .collect()
+        let mut cargos = vec![];
+        let mut comrak_dependency_detail = CargoInstallDependencyDetail::default();
+        comrak_dependency_detail.version = Some("1.0".into());
+        comrak_dependency_detail.git = Some("git@github.com:kivikakk/comrak.git".into());
+        cargos.push((
+            "comrak".to_string(),
+            CargoInstallDependency::Detailed(comrak_dependency_detail),
+        ));
+
+        let mut cargo_make_dependency_detail = CargoInstallDependencyDetail::default();
+        cargo_make_dependency_detail.version = Some("2.0".into());
+        cargos.push((
+            "cargo-make".to_string(),
+            CargoInstallDependency::Detailed(cargo_make_dependency_detail),
+        ));
+        cargos
     }
 
     #[fixture]
