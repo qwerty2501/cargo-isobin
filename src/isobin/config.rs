@@ -14,13 +14,16 @@ pub struct IsobinInstallConfig {
 impl IsobinInstallConfig {
     #[allow(dead_code)]
     pub fn from_path(path: impl AsRef<Path>) -> Result<IsobinInstallConfig> {
-        let mut file = File::open(path.as_ref())?;
+        let mut file = File::open(path.as_ref())
+            .map_err(|e| Error::new_read_isobin_install_config_error(e.into()))?;
         let mut content = String::new();
-        file.read_to_string(&mut content)?;
-        Self::from_str(&content)
+        file.read_to_string(&mut content)
+            .map_err(|e| Error::new_read_isobin_install_config_error(e.into()))?;
+        Self::from_toml_str(&content)
     }
-    fn from_str(s: &str) -> Result<IsobinInstallConfig> {
-        let tool_config: IsobinInstallConfig = toml::from_str(s)?;
+    fn from_toml_str(s: &str) -> Result<IsobinInstallConfig> {
+        let tool_config: IsobinInstallConfig = toml::from_str(s)
+            .map_err(|e| Error::new_parse_isobin_install_config_error(e.into()))?;
         Ok(tool_config)
     }
 }
@@ -93,7 +96,7 @@ mod tests {
         #[case] expected: IsobinInstallConfig,
         #[case] config_toml_str: &str,
     ) {
-        let result = IsobinInstallConfig::from_str(config_toml_str);
+        let result = IsobinInstallConfig::from_toml_str(config_toml_str);
         match result {
             Ok(actual) => {
                 pretty_assertions::assert_eq!(expected, actual);

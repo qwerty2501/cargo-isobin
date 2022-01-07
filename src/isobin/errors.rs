@@ -1,7 +1,12 @@
-pub use anyhow::Result;
+#[derive(thiserror::Error, Debug, new)]
+pub enum Error {
+    #[error("failed read isobin install config")]
+    ReadIsobinInstallConfigError(anyhow::Error),
 
-#[derive(thiserror::Error, Debug)]
-pub enum Errors {
+    #[error("{0}")]
+    ParseIsobinInstallConfigError(anyhow::Error),
     #[error("test error")]
     Test(),
 }
+
+pub type Result<T> = std::result::Result<T, Error>;
