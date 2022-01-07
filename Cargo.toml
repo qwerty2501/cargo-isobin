@@ -9,6 +9,7 @@ edition = "2021"
 anyhow = "1.0.52"
 cargo_toml = "0.10.3"
 clap = { version = "3.0.2", features = ["derive"] }
+derive-new = "0.5.9"
 serde = "1.0.133"
 serde_derive = "1.0.133"
 thiserror = "1.0.30"

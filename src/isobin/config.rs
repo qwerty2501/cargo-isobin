@@ -1,42 +1,45 @@
 use super::*;
-use std::collections::HashMap;
 use std::io::Read;
 use std::{fs::File, path::Path};
 
+use providers::cargo::CargoInstallConfig;
 use serde_derive::{Deserialize, Serialize};
 
-pub use cargo_toml::Dependency as InstallDependency;
-pub use cargo_toml::DependencyDetail as InstallDependencyDetail;
-
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
-pub struct InstallConfig {
-    #[serde(rename = "install-dependencies")]
-    install_dependencies: HashMap<String, InstallDependency>,
+pub struct IsobinInstallConfig {
+    #[serde(default)]
+    install: InstallConfig,
 }
 
-impl InstallConfig {
+impl IsobinInstallConfig {
     #[allow(dead_code)]
-    pub fn from_path(path: impl AsRef<Path>) -> Result<InstallConfig> {
+    pub fn from_path(path: impl AsRef<Path>) -> Result<IsobinInstallConfig> {
         let mut file = File::open(path.as_ref())?;
         let mut content = String::new();
         file.read_to_string(&mut content)?;
         Self::from_str(&content)
     }
-    fn from_str(s: &str) -> Result<InstallConfig> {
-        let tool_config: InstallConfig = toml::from_str(s)?;
+    fn from_str(s: &str) -> Result<IsobinInstallConfig> {
+        let tool_config: IsobinInstallConfig = toml::from_str(s)?;
         Ok(tool_config)
     }
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
+pub struct InstallConfig {
+    cargo: CargoInstallConfig,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use providers::cargo::{CargoInstallDependency, CargoInstallDependencyDetail};
 
     #[fixture]
-    fn install_dependencies() -> Vec<(String, InstallDependency)> {
+    fn cargo_install_dependencies() -> Vec<(String, CargoInstallDependency)> {
         [
-            ("comrak", InstallDependency::Simple("1.0".into())),
-            ("cargo-make", InstallDependency::Simple("2.0".into())),
+            ("comrak", CargoInstallDependency::Simple("1.0".into())),
+            ("cargo-make", CargoInstallDependency::Simple("2.0".into())),
         ]
         .into_iter()
         .map(|(name, v)| (name.to_string(), v))
@@ -44,18 +47,22 @@ mod tests {
     }
 
     #[fixture]
-    fn tool_config(install_dependencies: Vec<(String, InstallDependency)>) -> InstallConfig {
-        InstallConfig {
-            install_dependencies: install_dependencies.into_iter().collect(),
+    fn tool_config(
+        cargo_install_dependencies: Vec<(String, CargoInstallDependency)>,
+    ) -> IsobinInstallConfig {
+        IsobinInstallConfig {
+            install: InstallConfig {
+                cargo: CargoInstallConfig::new(cargo_install_dependencies.into_iter().collect()),
+            },
         }
     }
 
     #[fixture]
-    fn table_cargos() -> Vec<(String, InstallDependency)> {
+    fn table_cargos() -> Vec<(String, CargoInstallDependency)> {
         [
             (
                 "comrak",
-                InstallDependency::Detailed(InstallDependencyDetail {
+                CargoInstallDependency::Detailed(CargoInstallDependencyDetail {
                     version: Some("1.0".into()),
                     registry: None,
                     registry_index: None,
@@ -72,7 +79,7 @@ mod tests {
             ),
             (
                 "cargo-make",
-                InstallDependency::Detailed(InstallDependencyDetail {
+                CargoInstallDependency::Detailed(CargoInstallDependencyDetail {
                     version: Some("2.0".into()),
                     registry: None,
                     registry_index: None,
@@ -93,11 +100,20 @@ mod tests {
         .collect()
     }
 
+    #[fixture]
+    fn empty_cargos() -> Vec<(String, CargoInstallDependency)> {
+        return vec![];
+    }
+
     #[rstest]
-    #[case(tool_config(install_dependencies()),include_str!("testdata/tool_config_from_str_works/default_load.toml"))]
+    #[case(tool_config(cargo_install_dependencies()),include_str!("testdata/tool_config_from_str_works/default_load.toml"))]
     #[case(tool_config(table_cargos()),include_str!("testdata/tool_config_from_str_works/description_load.toml"))]
-    fn tool_config_from_str_works(#[case] expected: InstallConfig, #[case] config_toml_str: &str) {
-        let result = InstallConfig::from_str(config_toml_str);
+    #[case(tool_config(empty_cargos()),include_str!("testdata/tool_config_from_str_works/empty.toml"))]
+    fn tool_config_from_str_works(
+        #[case] expected: IsobinInstallConfig,
+        #[case] config_toml_str: &str,
+    ) {
+        let result = IsobinInstallConfig::from_str(config_toml_str);
         match result {
             Ok(actual) => {
                 pretty_assertions::assert_eq!(expected, actual);
