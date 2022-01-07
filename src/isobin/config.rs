@@ -27,6 +27,7 @@ impl IsobinInstallConfig {
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
 pub struct InstallConfig {
+    #[serde(default)]
     cargo: CargoInstallConfig,
 }
 
@@ -109,6 +110,7 @@ mod tests {
     #[case(tool_config(cargo_install_dependencies()),include_str!("testdata/tool_config_from_str_works/default_load.toml"))]
     #[case(tool_config(table_cargos()),include_str!("testdata/tool_config_from_str_works/description_load.toml"))]
     #[case(tool_config(empty_cargos()),include_str!("testdata/tool_config_from_str_works/empty.toml"))]
+    #[case(tool_config(empty_cargos()),include_str!("testdata/tool_config_from_str_works/empty_cargo.toml"))]
     fn tool_config_from_str_works(
         #[case] expected: IsobinInstallConfig,
         #[case] config_toml_str: &str,
