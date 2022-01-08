@@ -7,10 +7,10 @@ pub enum Error {
 #[derive(thiserror::Error, Debug, new)]
 pub enum IsobinConfigError {
     #[error("Failed read isobin install config")]
-    ReadIsobinConfig(anyhow::Error),
+    ReadIsobinConfig(#[source] anyhow::Error),
 
     #[error("Failed parse isobin config:{0}")]
-    ParseIsobinConfig(anyhow::Error),
+    ParseIsobinConfig(#[source] anyhow::Error),
 
     #[error("The target file does not have extension")]
     NothingFileExtension,

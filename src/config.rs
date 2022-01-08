@@ -47,14 +47,19 @@ impl IsobinConfig {
     fn from_str(s: &str, file_extension: ConfigFileExtensions) -> Result<IsobinConfig> {
         match file_extension {
             ConfigFileExtensions::Toml => Self::from_toml_str(s),
-            ConfigFileExtensions::Yaml => todo!(),
+            ConfigFileExtensions::Yaml => Self::from_yaml_str(s),
         }
     }
 
     fn from_toml_str(s: &str) -> Result<IsobinConfig> {
-        let tool_config: IsobinConfig =
+        let isobin_config: IsobinConfig =
             toml::from_str(s).map_err(|e| IsobinConfigError::new_parse_isobin_config(e.into()))?;
-        Ok(tool_config)
+        Ok(isobin_config)
+    }
+    fn from_yaml_str(s: &str) -> Result<IsobinConfig> {
+        let isobin_config: IsobinConfig = serde_yaml::from_str(s)
+            .map_err(|e| IsobinConfigError::new_parse_isobin_config(e.into()))?;
+        Ok(isobin_config)
     }
 }
 
@@ -116,11 +121,14 @@ mod tests {
     }
 
     #[rstest]
-    #[case(tool_config(cargo_install_dependencies()),include_str!("testdata/tool_config_from_str_works/default_load.toml"))]
-    #[case(tool_config(table_cargos()),include_str!("testdata/tool_config_from_str_works/description_load.toml"))]
-    #[case(tool_config(empty_cargos()),include_str!("testdata/tool_config_from_str_works/empty.toml"))]
-    #[case(tool_config(empty_cargos()),include_str!("testdata/tool_config_from_str_works/empty_cargo.toml"))]
-    fn tool_config_from_str_works(#[case] expected: IsobinConfig, #[case] config_toml_str: &str) {
+    #[case(include_str!("testdata/tool_config_from_str_works/default_load.toml"),tool_config(cargo_install_dependencies()))]
+    #[case(include_str!("testdata/tool_config_from_str_works/description_load.toml"),tool_config(table_cargos()))]
+    #[case(include_str!("testdata/tool_config_from_str_works/empty.toml"),tool_config(empty_cargos()))]
+    #[case(include_str!("testdata/tool_config_from_str_works/empty_cargo.toml"),tool_config(empty_cargos()))]
+    fn tool_config_from_toml_str_works(
+        #[case] config_toml_str: &str,
+        #[case] expected: IsobinConfig,
+    ) {
         let actual = IsobinConfig::from_toml_str(config_toml_str).unwrap();
         pretty_assertions::assert_eq!(expected, actual);
     }
@@ -132,5 +140,19 @@ mod tests {
     fn get_config_file_extension_works(#[case] path: &str, #[case] expected: ConfigFileExtensions) {
         let actual = IsobinConfig::get_file_extension(path).unwrap();
         pretty_assertions::assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case("foo.fm", IsobinConfigError::UnknownFileExtension("fm".into()))]
+    #[case("foo", IsobinConfigError::NothingFileExtension)]
+    fn get_config_file_extension_error_works(
+        #[case] path: &str,
+        #[case] expected: IsobinConfigError,
+    ) {
+        if let Err(err) = IsobinConfig::get_file_extension(path) {
+            pretty_assertions::assert_eq!(err.to_string(), expected.to_string());
+        } else {
+            panic!("unexpected result ok path:{}", path);
+        }
     }
 }
