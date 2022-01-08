@@ -3,18 +3,18 @@ use async_std::io::ReadExt;
 use async_std::{fs::File, path::Path};
 
 use crate::errors::{Error, Result};
-use providers::cargo::CargoInstallConfig;
+use providers::cargo::CargoConfig;
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
-pub struct IsobinInstallConfig {
+pub struct IsobinConfig {
     #[serde(default)]
-    install: InstallConfig,
+    cargo: CargoConfig,
 }
 
-impl IsobinInstallConfig {
+impl IsobinConfig {
     #[allow(dead_code)]
-    pub async fn from_path(path: impl AsRef<Path>) -> Result<IsobinInstallConfig> {
+    pub async fn from_path(path: impl AsRef<Path>) -> Result<IsobinConfig> {
         let mut file = File::open(path.as_ref())
             .await
             .map_err(|e| Error::new_read_isobin_install_config_error(e.into()))?;
@@ -24,17 +24,11 @@ impl IsobinInstallConfig {
             .map_err(|e| Error::new_read_isobin_install_config_error(e.into()))?;
         Self::from_toml_str(&content)
     }
-    fn from_toml_str(s: &str) -> Result<IsobinInstallConfig> {
-        let tool_config: IsobinInstallConfig = toml::from_str(s)
+    fn from_toml_str(s: &str) -> Result<IsobinConfig> {
+        let tool_config: IsobinConfig = toml::from_str(s)
             .map_err(|e| Error::new_parse_isobin_install_config_error(e.into()))?;
         Ok(tool_config)
     }
-}
-
-#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
-pub struct InstallConfig {
-    #[serde(default)]
-    cargo: CargoInstallConfig,
 }
 
 #[cfg(test)]
@@ -56,11 +50,9 @@ mod tests {
     #[fixture]
     fn tool_config(
         cargo_install_dependencies: Vec<(String, CargoInstallDependency)>,
-    ) -> IsobinInstallConfig {
-        IsobinInstallConfig {
-            install: InstallConfig {
-                cargo: CargoInstallConfig::new(cargo_install_dependencies.into_iter().collect()),
-            },
+    ) -> IsobinConfig {
+        IsobinConfig {
+            cargo: CargoConfig::new(cargo_install_dependencies.into_iter().collect()),
         }
     }
 
@@ -95,11 +87,8 @@ mod tests {
     #[case(tool_config(table_cargos()),include_str!("testdata/tool_config_from_str_works/description_load.toml"))]
     #[case(tool_config(empty_cargos()),include_str!("testdata/tool_config_from_str_works/empty.toml"))]
     #[case(tool_config(empty_cargos()),include_str!("testdata/tool_config_from_str_works/empty_cargo.toml"))]
-    fn tool_config_from_str_works(
-        #[case] expected: IsobinInstallConfig,
-        #[case] config_toml_str: &str,
-    ) {
-        let result = IsobinInstallConfig::from_toml_str(config_toml_str);
+    fn tool_config_from_str_works(#[case] expected: IsobinConfig, #[case] config_toml_str: &str) {
+        let result = IsobinConfig::from_toml_str(config_toml_str);
         match result {
             Ok(actual) => {
                 pretty_assertions::assert_eq!(expected, actual);
