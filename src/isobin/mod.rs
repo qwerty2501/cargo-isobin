@@ -1,6 +1,5 @@
 mod application;
 mod cli;
-mod config;
 mod errors;
 
 #[allow(unused_imports)]

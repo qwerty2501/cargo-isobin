@@ -2,6 +2,7 @@ use super::*;
 use std::io::Read;
 use std::{fs::File, path::Path};
 
+use crate::errors::{Error, Result};
 use providers::cargo::CargoInstallConfig;
 use serde_derive::{Deserialize, Serialize};
 
