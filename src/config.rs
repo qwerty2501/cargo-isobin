@@ -2,7 +2,7 @@ use super::*;
 use async_std::io::ReadExt;
 use async_std::{fs::File, path::Path};
 
-use crate::errors::{Error, Result};
+use crate::errors::{IsobinConfigError, Result};
 use providers::cargo::CargoConfig;
 use serde_derive::{Deserialize, Serialize};
 
@@ -15,20 +15,53 @@ pub struct IsobinConfig {
 impl IsobinConfig {
     #[allow(dead_code)]
     pub async fn from_path(path: impl AsRef<Path>) -> Result<IsobinConfig> {
-        let mut file = File::open(path.as_ref())
+        let path = path.as_ref();
+        let mut file = File::open(path)
             .await
-            .map_err(|e| Error::new_read_isobin_install_config_error(e.into()))?;
+            .map_err(|e| IsobinConfigError::new_read_isobin_config(e.into()))?;
         let mut content = String::new();
         file.read_to_string(&mut content)
             .await
-            .map_err(|e| Error::new_read_isobin_install_config_error(e.into()))?;
-        Self::from_toml_str(&content)
+            .map_err(|e| IsobinConfigError::new_read_isobin_config(e.into()))?;
+        let file_extension = Self::get_file_extension(path)?;
+        Self::from_str(&content, file_extension)
     }
+
+    fn get_file_extension(path: impl AsRef<Path>) -> Result<ConfigFileExtensions> {
+        let extension = path
+            .as_ref()
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .ok_or(IsobinConfigError::NothingFileExtension)?;
+
+        const TOML_EXTENSION: &str = "toml";
+        const YAML_EXTENSION: &str = "yaml";
+        const YML_EXTENSION: &str = "yml";
+        match extension {
+            TOML_EXTENSION => Ok(ConfigFileExtensions::Toml),
+            YML_EXTENSION | YAML_EXTENSION => Ok(ConfigFileExtensions::Yaml),
+            _ => Err(IsobinConfigError::new_unknown_file_extension(extension.to_string()).into()),
+        }
+    }
+
+    fn from_str(s: &str, file_extension: ConfigFileExtensions) -> Result<IsobinConfig> {
+        match file_extension {
+            ConfigFileExtensions::Toml => Self::from_toml_str(s),
+            ConfigFileExtensions::Yaml => todo!(),
+        }
+    }
+
     fn from_toml_str(s: &str) -> Result<IsobinConfig> {
-        let tool_config: IsobinConfig = toml::from_str(s)
-            .map_err(|e| Error::new_parse_isobin_install_config_error(e.into()))?;
+        let tool_config: IsobinConfig =
+            toml::from_str(s).map_err(|e| IsobinConfigError::new_parse_isobin_config(e.into()))?;
         Ok(tool_config)
     }
+}
+
+#[derive(PartialEq, Debug)]
+enum ConfigFileExtensions {
+    Yaml,
+    Toml,
 }
 
 #[cfg(test)]
@@ -88,14 +121,16 @@ mod tests {
     #[case(tool_config(empty_cargos()),include_str!("testdata/tool_config_from_str_works/empty.toml"))]
     #[case(tool_config(empty_cargos()),include_str!("testdata/tool_config_from_str_works/empty_cargo.toml"))]
     fn tool_config_from_str_works(#[case] expected: IsobinConfig, #[case] config_toml_str: &str) {
-        let result = IsobinConfig::from_toml_str(config_toml_str);
-        match result {
-            Ok(actual) => {
-                pretty_assertions::assert_eq!(expected, actual);
-            }
-            Err(err) => {
-                panic!("{}", err);
-            }
-        }
+        let actual = IsobinConfig::from_toml_str(config_toml_str).unwrap();
+        pretty_assertions::assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case("foo.yaml", ConfigFileExtensions::Yaml)]
+    #[case("foo.yml", ConfigFileExtensions::Yaml)]
+    #[case("foo.toml", ConfigFileExtensions::Toml)]
+    fn get_config_file_extension_works(#[case] path: &str, #[case] expected: ConfigFileExtensions) {
+        let actual = IsobinConfig::get_file_extension(path).unwrap();
+        pretty_assertions::assert_eq!(expected, actual);
     }
 }
