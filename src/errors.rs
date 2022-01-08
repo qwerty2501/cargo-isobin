@@ -28,11 +28,6 @@ pub mod test_util {
         result: &Result<T, E>,
     ) {
         if let Err(err) = result {
-            use std::any::Any;
-            pretty_assertions::assert_eq!(
-                (expected as &dyn Any).type_id(),
-                (err as &dyn Any).type_id()
-            );
             pretty_assertions::assert_eq!(format!("{:?}", expected), format!("{:?}", err));
         } else {
             panic!("unexpected result ok");

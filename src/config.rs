@@ -73,7 +73,32 @@ enum ConfigFileExtensions {
 mod tests {
     use super::*;
     use crate::errors::{test_util::assert_same_error, Error};
+    use anyhow::anyhow;
     use providers::cargo::{CargoInstallDependency, CargoInstallDependencyDetail};
+
+    #[rstest]
+    #[case(include_str!("testdata/isobin_configs/default_load.toml"),ConfigFileExtensions::Toml,tool_config(cargo_install_dependencies()))]
+    #[case(include_str!("testdata/isobin_configs/default_load.yaml"),ConfigFileExtensions::Yaml,tool_config(cargo_install_dependencies()))]
+    fn isobin_config_from_str_works(
+        #[case] config_str: &str,
+        #[case] ft: ConfigFileExtensions,
+        #[case] expected: IsobinConfig,
+    ) {
+        let actual = IsobinConfig::from_str(config_str, ft).unwrap();
+        pretty_assertions::assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case(include_str!("testdata/isobin_configs/default_load.yaml"),ConfigFileExtensions::Toml,IsobinConfigError::new_parse_isobin_config(anyhow!("expected an equals, found a colon at line 1 column 6")).into())]
+    #[case(include_str!("testdata/isobin_configs/default_load.toml"),ConfigFileExtensions::Yaml,IsobinConfigError::new_parse_isobin_config(anyhow!("did not find expected <document start> at line 2 column 1\n\nCaused by:\n    did not find expected <document start> at line 2 column 1")).into())]
+    fn isobin_config_from_str_error_works(
+        #[case] config_str: &str,
+        #[case] ft: ConfigFileExtensions,
+        #[case] expected: Error,
+    ) {
+        let result = IsobinConfig::from_str(config_str, ft);
+        assert_same_error(&expected, &result);
+    }
 
     #[fixture]
     fn cargo_install_dependencies() -> Vec<(String, CargoInstallDependency)> {
@@ -122,10 +147,10 @@ mod tests {
     }
 
     #[rstest]
-    #[case(include_str!("testdata/isobin_config_from_toml_str_works/default_load.toml"),tool_config(cargo_install_dependencies()))]
-    #[case(include_str!("testdata/isobin_config_from_toml_str_works/description_load.toml"),tool_config(table_cargos()))]
-    #[case(include_str!("testdata/isobin_config_from_toml_str_works/empty.toml"),tool_config(empty_cargos()))]
-    #[case(include_str!("testdata/isobin_config_from_toml_str_works/empty_cargo.toml"),tool_config(empty_cargos()))]
+    #[case(include_str!("testdata/isobin_configs/default_load.toml"),tool_config(cargo_install_dependencies()))]
+    #[case(include_str!("testdata/isobin_configs/description_load.toml"),tool_config(table_cargos()))]
+    #[case(include_str!("testdata/isobin_configs/empty.toml"),tool_config(empty_cargos()))]
+    #[case(include_str!("testdata/isobin_configs/empty_cargo.toml"),tool_config(empty_cargos()))]
     fn isobin_config_from_toml_str_works(
         #[case] config_toml_str: &str,
         #[case] expected: IsobinConfig,
@@ -135,14 +160,25 @@ mod tests {
     }
 
     #[rstest]
-    #[case(include_str!("testdata/isobin_config_from_yaml_str_works/default_load.yaml"),tool_config(cargo_install_dependencies()))]
-    #[case(include_str!("testdata/isobin_config_from_yaml_str_works/description_load.yaml"),tool_config(table_cargos()))]
+    #[case(include_str!("testdata/isobin_configs/default_load.yaml"),tool_config(cargo_install_dependencies()))]
+    #[case(include_str!("testdata/isobin_configs/description_load.yaml"),tool_config(table_cargos()))]
     fn isobin_config_from_yaml_str_works(
         #[case] config_toml_str: &str,
         #[case] expected: IsobinConfig,
     ) {
         let actual = IsobinConfig::from_yaml_str(config_toml_str).unwrap();
         pretty_assertions::assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case(include_str!("testdata/isobin_configs/empty.yaml"),IsobinConfigError::new_parse_isobin_config(anyhow!("EOF while parsing a value")).into())]
+    #[case(include_str!("testdata/isobin_configs/empty_cargo.yaml"),IsobinConfigError::new_parse_isobin_config(anyhow!("cargo.installs: invalid type: unit value, expected a map at line 3 column 1")).into())]
+    fn isobin_config_from_yaml_str_error_works(
+        #[case] config_toml_str: &str,
+        #[case] expected: Error,
+    ) {
+        let result = IsobinConfig::from_yaml_str(config_toml_str);
+        assert_same_error(&expected, &result);
     }
 
     #[rstest]
