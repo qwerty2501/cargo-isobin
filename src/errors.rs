@@ -20,3 +20,22 @@ pub enum IsobinConfigError {
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+#[cfg(test)]
+pub mod test_util {
+    pub fn assert_same_error<T, E: 'static + std::error::Error>(
+        expected: &E,
+        result: &Result<T, E>,
+    ) {
+        if let Err(err) = result {
+            use std::any::Any;
+            pretty_assertions::assert_eq!(
+                (expected as &dyn Any).type_id(),
+                (err as &dyn Any).type_id()
+            );
+            pretty_assertions::assert_eq!(format!("{:?}", expected), format!("{:?}", err));
+        } else {
+            panic!("unexpected result ok");
+        }
+    }
+}

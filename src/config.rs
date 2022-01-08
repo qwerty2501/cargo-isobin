@@ -72,6 +72,7 @@ enum ConfigFileExtensions {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::errors::{test_util::assert_same_error, Error};
     use providers::cargo::{CargoInstallDependency, CargoInstallDependencyDetail};
 
     #[fixture]
@@ -143,16 +144,10 @@ mod tests {
     }
 
     #[rstest]
-    #[case("foo.fm", IsobinConfigError::UnknownFileExtension("fm".into()))]
-    #[case("foo", IsobinConfigError::NothingFileExtension)]
-    fn get_config_file_extension_error_works(
-        #[case] path: &str,
-        #[case] expected: IsobinConfigError,
-    ) {
-        if let Err(err) = IsobinConfig::get_file_extension(path) {
-            pretty_assertions::assert_eq!(err.to_string(), expected.to_string());
-        } else {
-            panic!("unexpected result ok path:{}", path);
-        }
+    #[case("foo.fm", IsobinConfigError::UnknownFileExtension("fm".into()).into())]
+    #[case("foo", IsobinConfigError::NothingFileExtension.into())]
+    fn get_config_file_extension_error_works(#[case] path: &str, #[case] expected: Error) {
+        let result = IsobinConfig::get_file_extension(path);
+        assert_same_error(&expected, &result);
     }
 }
