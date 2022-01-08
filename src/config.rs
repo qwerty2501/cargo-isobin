@@ -122,15 +122,26 @@ mod tests {
     }
 
     #[rstest]
-    #[case(include_str!("testdata/tool_config_from_str_works/default_load.toml"),tool_config(cargo_install_dependencies()))]
-    #[case(include_str!("testdata/tool_config_from_str_works/description_load.toml"),tool_config(table_cargos()))]
-    #[case(include_str!("testdata/tool_config_from_str_works/empty.toml"),tool_config(empty_cargos()))]
-    #[case(include_str!("testdata/tool_config_from_str_works/empty_cargo.toml"),tool_config(empty_cargos()))]
-    fn tool_config_from_toml_str_works(
+    #[case(include_str!("testdata/isobin_config_from_toml_str_works/default_load.toml"),tool_config(cargo_install_dependencies()))]
+    #[case(include_str!("testdata/isobin_config_from_toml_str_works/description_load.toml"),tool_config(table_cargos()))]
+    #[case(include_str!("testdata/isobin_config_from_toml_str_works/empty.toml"),tool_config(empty_cargos()))]
+    #[case(include_str!("testdata/isobin_config_from_toml_str_works/empty_cargo.toml"),tool_config(empty_cargos()))]
+    fn isobin_config_from_toml_str_works(
         #[case] config_toml_str: &str,
         #[case] expected: IsobinConfig,
     ) {
         let actual = IsobinConfig::from_toml_str(config_toml_str).unwrap();
+        pretty_assertions::assert_eq!(expected, actual);
+    }
+
+    #[rstest]
+    #[case(include_str!("testdata/isobin_config_from_yaml_str_works/default_load.yaml"),tool_config(cargo_install_dependencies()))]
+    #[case(include_str!("testdata/isobin_config_from_yaml_str_works/description_load.yaml"),tool_config(table_cargos()))]
+    fn isobin_config_from_yaml_str_works(
+        #[case] config_toml_str: &str,
+        #[case] expected: IsobinConfig,
+    ) {
+        let actual = IsobinConfig::from_yaml_str(config_toml_str).unwrap();
         pretty_assertions::assert_eq!(expected, actual);
     }
 

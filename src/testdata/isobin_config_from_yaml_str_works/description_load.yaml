@@ -1,0 +1,7 @@
+cargo:
+  installs:
+    cargo-make:
+      version: "2.0"
+    comrak:
+      version: "1.0"
+      git: "git@github.com:kivikakk/comrak.git"

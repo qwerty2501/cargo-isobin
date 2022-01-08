@@ -1,0 +1,4 @@
+cargo:
+  installs:
+    cargo-make: "2.0"
+    comrak: "1.0"
