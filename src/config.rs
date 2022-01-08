@@ -1,6 +1,6 @@
 use super::*;
-use std::io::Read;
-use std::{fs::File, path::Path};
+use async_std::io::ReadExt;
+use async_std::{fs::File, path::Path};
 
 use crate::errors::{Error, Result};
 use providers::cargo::CargoInstallConfig;
@@ -14,11 +14,13 @@ pub struct IsobinInstallConfig {
 
 impl IsobinInstallConfig {
     #[allow(dead_code)]
-    pub fn from_path(path: impl AsRef<Path>) -> Result<IsobinInstallConfig> {
+    pub async fn from_path(path: impl AsRef<Path>) -> Result<IsobinInstallConfig> {
         let mut file = File::open(path.as_ref())
+            .await
             .map_err(|e| Error::new_read_isobin_install_config_error(e.into()))?;
         let mut content = String::new();
         file.read_to_string(&mut content)
+            .await
             .map_err(|e| Error::new_read_isobin_install_config_error(e.into()))?;
         Self::from_toml_str(&content)
     }

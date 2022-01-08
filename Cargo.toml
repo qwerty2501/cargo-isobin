@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.52"
+async-std = "1.10.0"
 cargo_toml = "0.10.3"
 clap = { version = "3.0.2", features = ["derive"] }
 derive-new = "0.5.9"
