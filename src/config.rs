@@ -72,7 +72,7 @@ enum ConfigFileExtensions {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::errors::{test_util::assert_same_error, Error};
+    use crate::errors::{test_util::assert_error_result, Error};
     use anyhow::anyhow;
     use providers::cargo::{CargoInstallDependency, CargoInstallDependencyDetail};
 
@@ -97,7 +97,7 @@ mod tests {
         #[case] expected: Error,
     ) {
         let result = IsobinConfig::from_str(config_str, ft);
-        assert_same_error(&expected, &result);
+        assert_error_result(&expected, &result);
     }
 
     #[fixture]
@@ -178,7 +178,7 @@ mod tests {
         #[case] expected: Error,
     ) {
         let result = IsobinConfig::from_yaml_str(config_toml_str);
-        assert_same_error(&expected, &result);
+        assert_error_result(&expected, &result);
     }
 
     #[rstest]
@@ -195,6 +195,6 @@ mod tests {
     #[case("foo", IsobinConfigError::NothingFileExtension.into())]
     fn get_config_file_extension_error_works(#[case] path: &str, #[case] expected: Error) {
         let result = IsobinConfig::get_file_extension(path);
-        assert_same_error(&expected, &result);
+        assert_error_result(&expected, &result);
     }
 }
