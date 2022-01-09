@@ -18,11 +18,11 @@ impl IsobinConfig {
         let path = path.as_ref();
         let mut file = File::open(path)
             .await
-            .map_err(|e| IsobinConfigError::new_read_isobin_config(e.into()))?;
+            .map_err(|e| IsobinConfigError::new_read_isobin_config(path.into(), e.into()))?;
         let mut content = String::new();
         file.read_to_string(&mut content)
             .await
-            .map_err(|e| IsobinConfigError::new_read_isobin_config(e.into()))?;
+            .map_err(|e| IsobinConfigError::new_read_isobin_config(path.into(), e.into()))?;
         let file_extension = Self::get_file_extension(path)?;
         Self::from_str(&content, file_extension)
     }
@@ -75,6 +75,17 @@ mod tests {
     use crate::errors::Error;
     use anyhow::anyhow;
     use providers::cargo::{CargoInstallDependency, CargoInstallDependencyDetail};
+
+    #[rstest]
+    #[case(
+        "testdata/isobin_configs/default_load.toml",
+        tool_config(cargo_install_dependencies())
+    )]
+    async fn isobin_config_from_path_works(#[case] path: &str, #[case] expected: IsobinConfig) {
+        let dir = current_source_dir!();
+        let actual = IsobinConfig::from_path(dir.join(path)).await.unwrap();
+        pretty_assertions::assert_eq!(expected, actual);
+    }
 
     #[rstest]
     #[case(include_str!("testdata/isobin_configs/default_load.toml"),ConfigFileExtensions::Toml,tool_config(cargo_install_dependencies()))]

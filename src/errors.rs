@@ -1,3 +1,5 @@
+use async_std::path::PathBuf;
+
 #[derive(thiserror::Error, Debug, new)]
 pub enum Error {
     #[error("{0}")]
@@ -7,7 +9,7 @@ pub enum Error {
 #[derive(thiserror::Error, Debug, new)]
 pub enum IsobinConfigError {
     #[error("Failed read isobin install config")]
-    ReadIsobinConfig(#[source] anyhow::Error),
+    ReadIsobinConfig(PathBuf, #[source] anyhow::Error),
 
     #[error("Failed parse isobin config:{0}")]
     ParseIsobinConfig(#[source] anyhow::Error),
