@@ -1,26 +1,11 @@
-use async_std::path::PathBuf;
-
+use super::*;
 #[derive(thiserror::Error, Debug, new)]
 pub enum Error {
     #[error("{0}")]
-    IsobinConfig(#[from] IsobinConfigError),
+    IsobinConfig(#[from] config::IsobinConfigError),
 }
 
-#[derive(thiserror::Error, Debug, new)]
-pub enum IsobinConfigError {
-    #[error("Failed read isobin install config")]
-    ReadIsobinConfig(PathBuf, #[source] anyhow::Error),
-
-    #[error("Failed parse isobin config:{0}")]
-    ParseIsobinConfig(#[source] anyhow::Error),
-
-    #[error("The target file does not have extension")]
-    NothingFileExtension,
-
-    #[error("The target file has unknown extension:{0}")]
-    UnknownFileExtension(String),
-}
-
+#[allow(dead_code)]
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(test)]
