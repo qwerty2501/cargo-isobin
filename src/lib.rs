@@ -6,6 +6,7 @@ mod directories;
 mod errors;
 mod installer;
 pub mod isobin;
+mod macros;
 pub mod providers;
 pub use installer::*;
 
