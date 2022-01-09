@@ -27,6 +27,12 @@ pub enum PathsError {
         #[source]
         error: anyhow::Error,
     },
+    #[error("Failed save the workspace path map file\nworkspace_path_map file path:{path:?}\nerror:{error}")]
+    SaveWorkspaceMap {
+        path: PathBuf,
+        #[source]
+        error: anyhow::Error,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, PathsError>;

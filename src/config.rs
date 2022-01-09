@@ -41,7 +41,7 @@ type Result<T> = std::result::Result<T, IsobinConfigError>;
 
 impl IsobinConfig {
     #[allow(dead_code)]
-    pub async fn from_path(path: impl AsRef<Path>) -> Result<IsobinConfig> {
+    pub async fn parse_from_path(path: impl AsRef<Path>) -> Result<IsobinConfig> {
         let path = path.as_ref();
         let mut file = File::open(path)
             .await
@@ -51,7 +51,7 @@ impl IsobinConfig {
             .await
             .map_err(|e| IsobinConfigError::new_read_isobin_config(path.into(), e.into()))?;
         let file_extension = Self::get_file_extension(path)?;
-        Self::from_str(&content, file_extension, path)
+        Self::parse(&content, file_extension, path)
     }
 
     fn get_file_extension(path: impl AsRef<Path>) -> Result<ConfigFileExtensions> {
@@ -74,24 +74,24 @@ impl IsobinConfig {
         }
     }
 
-    fn from_str(
+    fn parse(
         s: &str,
         file_extension: ConfigFileExtensions,
         path: impl AsRef<Path>,
     ) -> Result<IsobinConfig> {
         match file_extension {
-            ConfigFileExtensions::Toml => Self::from_toml_str(s, path),
-            ConfigFileExtensions::Yaml => Self::from_yaml_str(s, path),
+            ConfigFileExtensions::Toml => Self::parse_toml(s, path),
+            ConfigFileExtensions::Yaml => Self::parse_yaml(s, path),
         }
     }
 
-    fn from_toml_str(s: &str, path: impl AsRef<Path>) -> Result<IsobinConfig> {
+    fn parse_toml(s: &str, path: impl AsRef<Path>) -> Result<IsobinConfig> {
         let isobin_config: IsobinConfig = toml::from_str(s).map_err(|e| {
             IsobinConfigError::new_parse_isobin_config(path.as_ref().into(), e.into())
         })?;
         Ok(isobin_config)
     }
-    fn from_yaml_str(s: &str, path: impl AsRef<Path>) -> Result<IsobinConfig> {
+    fn parse_yaml(s: &str, path: impl AsRef<Path>) -> Result<IsobinConfig> {
         let isobin_config: IsobinConfig = serde_yaml::from_str(s).map_err(|e| {
             IsobinConfigError::new_parse_isobin_config(path.as_ref().into(), e.into())
         })?;
@@ -118,7 +118,7 @@ mod tests {
     )]
     async fn isobin_config_from_path_works(#[case] path: &str, #[case] expected: IsobinConfig) {
         let dir = current_source_dir!();
-        let actual = IsobinConfig::from_path(dir.join(path)).await.unwrap();
+        let actual = IsobinConfig::parse_from_path(dir.join(path)).await.unwrap();
         pretty_assertions::assert_eq!(expected, actual);
     }
 
@@ -131,7 +131,7 @@ mod tests {
         #[case] path: &str,
         #[case] expected: IsobinConfig,
     ) {
-        let actual = IsobinConfig::from_str(config_str, ft, path).unwrap();
+        let actual = IsobinConfig::parse(config_str, ft, path).unwrap();
         pretty_assertions::assert_eq!(expected, actual);
     }
 
@@ -144,7 +144,7 @@ mod tests {
         #[case] path: &str,
         #[case] expected: IsobinConfigError,
     ) {
-        let result = IsobinConfig::from_str(config_str, ft, path);
+        let result = IsobinConfig::parse(config_str, ft, path);
         assert_error_result!(expected, result);
     }
 
@@ -204,7 +204,7 @@ mod tests {
         #[values("foo.toml")] path: &str,
         #[case] expected: IsobinConfig,
     ) {
-        let actual = IsobinConfig::from_toml_str(config_toml_str, path).unwrap();
+        let actual = IsobinConfig::parse_toml(config_toml_str, path).unwrap();
         pretty_assertions::assert_eq!(expected, actual);
     }
 
@@ -216,7 +216,7 @@ mod tests {
         #[values("foo.yaml")] path: &str,
         #[case] expected: IsobinConfig,
     ) {
-        let actual = IsobinConfig::from_yaml_str(config_toml_str, path).unwrap();
+        let actual = IsobinConfig::parse_yaml(config_toml_str, path).unwrap();
         pretty_assertions::assert_eq!(expected, actual);
     }
 
@@ -228,7 +228,7 @@ mod tests {
         #[values("foo.yaml")] path: &str,
         #[case] expected: IsobinConfigError,
     ) {
-        let result = IsobinConfig::from_yaml_str(config_toml_str, path);
+        let result = IsobinConfig::parse_yaml(config_toml_str, path);
         assert_error_result!(expected, result);
     }
 
