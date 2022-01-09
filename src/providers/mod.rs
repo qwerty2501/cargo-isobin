@@ -2,3 +2,8 @@
 use super::*;
 
 pub mod cargo;
+
+#[derive(PartialEq, Debug)]
+pub enum ProviderType {
+    Cargo,
+}
