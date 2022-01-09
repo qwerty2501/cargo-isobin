@@ -16,18 +16,18 @@ pub struct IsobinConfig {
 
 #[derive(thiserror::Error, Debug, new)]
 pub enum IsobinConfigError {
-    #[error("Failed read isobin install config\npath:{path:?}")]
+    #[error("Failed read isobin install config\npath:{path:?}\nerror:{source}")]
     ReadIsobinConfig {
         path: PathBuf,
         #[source]
-        error: anyhow::Error,
+        source: anyhow::Error,
     },
 
-    #[error("Failed parse isobin config\npath:{path:?}\nerror:{error}")]
+    #[error("Failed parse isobin config\npath:{path:?}\nerror:{source}")]
     ParseIsobinConfig {
         path: PathBuf,
         #[source]
-        error: anyhow::Error,
+        source: anyhow::Error,
     },
 
     #[error("The target file does not have extension\npath:{path:?}")]

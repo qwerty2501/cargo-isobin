@@ -2,11 +2,11 @@
 extern crate derive_new;
 
 mod config;
-mod directories;
 mod errors;
 mod installer;
 pub mod isobin;
 mod macros;
+mod paths;
 pub mod providers;
 pub use installer::*;
 
