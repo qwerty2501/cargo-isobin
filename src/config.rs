@@ -29,7 +29,7 @@ type Result<T> = std::result::Result<T, IsobinConfigError>;
 
 impl IsobinConfig {
     #[allow(dead_code)]
-    pub async fn parse_from_path(path: impl AsRef<Path>) -> Result<IsobinConfig> {
+    pub async fn parse_from_file(path: impl AsRef<Path>) -> Result<IsobinConfig> {
         let file_extension = Self::get_file_extension(path.as_ref())?;
         Self::parse(file_extension, path).await
     }
@@ -88,7 +88,7 @@ mod tests {
     )]
     async fn isobin_config_from_path_works(#[case] path: &str, #[case] expected: IsobinConfig) {
         let dir = current_source_dir!();
-        let actual = IsobinConfig::parse_from_path(dir.join(path)).await.unwrap();
+        let actual = IsobinConfig::parse_from_file(dir.join(path)).await.unwrap();
         pretty_assertions::assert_eq!(expected, actual);
     }
 
