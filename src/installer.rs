@@ -14,7 +14,7 @@ impl InstallRunnerProvider {
 
 #[async_trait]
 pub trait InstallRunner {
-    fn provider_type(&self) -> &providers::ProviderType;
+    fn provider_type(&self) -> &providers::ProviderKind;
     async fn run_installs(&self) -> Result<()>;
 }
 
@@ -26,7 +26,7 @@ struct InstallRunnerImpl<I: providers::Installer> {
 
 #[async_trait]
 impl<I: providers::Installer> InstallRunner for InstallRunnerImpl<I> {
-    fn provider_type(&self) -> &providers::ProviderType {
+    fn provider_type(&self) -> &providers::ProviderKind {
         self.installer.provider_type()
     }
 

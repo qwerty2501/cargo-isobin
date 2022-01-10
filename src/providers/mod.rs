@@ -7,6 +7,6 @@ mod installer;
 pub use installer::*;
 
 #[derive(PartialEq, Debug)]
-pub enum ProviderType {
+pub enum ProviderKind {
     Cargo,
 }

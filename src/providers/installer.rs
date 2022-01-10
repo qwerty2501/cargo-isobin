@@ -4,7 +4,7 @@ type Result<T> = std::result::Result<T, InstallError>;
 pub trait Installer: 'static + Send + Sync {
     type InstallTarget: InstallTarget;
 
-    fn provider_type(&self) -> &providers::ProviderType;
+    fn provider_type(&self) -> &providers::ProviderKind;
     async fn installs(&self, targets: &[Self::InstallTarget]) -> Result<()>;
     async fn install(&self, target: &Self::InstallTarget) -> Result<()> {
         target.install()
@@ -13,7 +13,7 @@ pub trait Installer: 'static + Send + Sync {
 
 #[async_trait]
 pub trait InstallTarget: 'static + Send + Sync {
-    fn provider_type(&self) -> &providers::ProviderType;
+    fn provider_type(&self) -> &providers::ProviderKind;
 
     fn install(&self) -> Result<()>;
 }

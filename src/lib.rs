@@ -6,6 +6,7 @@ mod installer;
 mod macros;
 mod paths;
 pub mod providers;
+mod utils;
 pub use installer::*;
 
 use async_trait::async_trait;
