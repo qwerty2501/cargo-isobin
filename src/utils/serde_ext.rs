@@ -72,7 +72,7 @@ impl Yaml {
         serde_yaml::to_string(value)
             .map_err(|e| SerdeExtError::new_serialize(e.into(), path.as_ref().into()))
     }
-    fn deserialize_str<T: serde::de::DeserializeOwned>(
+    pub fn deserialize_str<T: serde::de::DeserializeOwned>(
         s: &str,
         path: impl AsRef<Path>,
     ) -> Result<T> {
@@ -205,12 +205,15 @@ fn make_hint_string(s: &str, line: usize, column: usize) -> String {
         .lines()
         .map(|line| line.chars().collect::<Vec<_>>())
         .collect::<Vec<_>>();
-    let hint_target = &lines[line - 3..line];
+    let diff = std::cmp::min(line, 2);
+    let hint_target = &lines[line - diff..=line];
     let mut new_lines = Vec::from_iter(hint_target);
-    let mut hint = vec!['_'; if column > 0 { column - 1 } else { column }];
+    let mut hint = vec!['_'; column];
     hint.push('^');
     hint.push('\n');
-    new_lines.push(&hint);
+    if !new_lines.is_empty() {
+        new_lines.push(&hint);
+    }
 
     new_lines
         .iter()
@@ -262,13 +265,13 @@ mod tests {
 
     #[rstest]
     #[case(include_str!("testdata/make_hint_string_works/case1_json/given_json.json"), 
-        3,
-        3,
+        2,
+        2,
         include_str!("testdata/make_hint_string_works/case1_json/expected_hint.txt"),
         )]
     #[case(include_str!("testdata/make_hint_string_works/case1_json/given_json.json"), 
-        5,
-        17,
+        4,
+        16,
         include_str!("testdata/make_hint_string_works/case2_json/expected_hint.txt"),
         )]
     fn make_hint_string_works(

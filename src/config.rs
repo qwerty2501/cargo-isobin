@@ -1,9 +1,6 @@
 use super::*;
-use async_std::io::ReadExt;
-use async_std::{
-    fs::File,
-    path::{Path, PathBuf},
-};
+use crate::utils::serde_ext::{SerdeExtError, Toml, Yaml};
+use async_std::path::{Path, PathBuf};
 
 use providers::cargo::CargoConfig;
 use serde_derive::{Deserialize, Serialize};
@@ -16,20 +13,8 @@ pub struct IsobinConfig {
 
 #[derive(thiserror::Error, Debug, new)]
 pub enum IsobinConfigError {
-    #[error("Failed read isobin install config\npath:{path:?}\nerror:{source}")]
-    ReadIsobinConfig {
-        path: PathBuf,
-        #[source]
-        source: anyhow::Error,
-    },
-
-    #[error("Failed parse isobin config\npath:{path:?}\nerror:{source}")]
-    ParseIsobinConfig {
-        path: PathBuf,
-        #[source]
-        source: anyhow::Error,
-    },
-
+    #[error("{0}")]
+    Serde(#[from] SerdeExtError),
     #[error("The target file does not have extension\npath:{path:?}")]
     NothingFileExtension { path: PathBuf },
 
@@ -42,16 +27,8 @@ type Result<T> = std::result::Result<T, IsobinConfigError>;
 impl IsobinConfig {
     #[allow(dead_code)]
     pub async fn parse_from_path(path: impl AsRef<Path>) -> Result<IsobinConfig> {
-        let path = path.as_ref();
-        let mut file = File::open(path)
-            .await
-            .map_err(|e| IsobinConfigError::new_read_isobin_config(path.into(), e.into()))?;
-        let mut content = String::new();
-        file.read_to_string(&mut content)
-            .await
-            .map_err(|e| IsobinConfigError::new_read_isobin_config(path.into(), e.into()))?;
-        let file_extension = Self::get_file_extension(path)?;
-        Self::parse(&content, file_extension, path)
+        let file_extension = Self::get_file_extension(path.as_ref())?;
+        Self::parse(file_extension, path).await
     }
 
     fn get_file_extension(path: impl AsRef<Path>) -> Result<ConfigFileExtensions> {
@@ -74,28 +51,14 @@ impl IsobinConfig {
         }
     }
 
-    fn parse(
-        s: &str,
+    async fn parse(
         file_extension: ConfigFileExtensions,
         path: impl AsRef<Path>,
     ) -> Result<IsobinConfig> {
         match file_extension {
-            ConfigFileExtensions::Toml => Self::parse_toml(s, path),
-            ConfigFileExtensions::Yaml => Self::parse_yaml(s, path),
+            ConfigFileExtensions::Toml => Ok(Toml::parse_from_file(path).await?),
+            ConfigFileExtensions::Yaml => Ok(Yaml::parse_from_file(path).await?),
         }
-    }
-
-    fn parse_toml(s: &str, path: impl AsRef<Path>) -> Result<IsobinConfig> {
-        let isobin_config: IsobinConfig = toml::from_str(s).map_err(|e| {
-            IsobinConfigError::new_parse_isobin_config(path.as_ref().into(), e.into())
-        })?;
-        Ok(isobin_config)
-    }
-    fn parse_yaml(s: &str, path: impl AsRef<Path>) -> Result<IsobinConfig> {
-        let isobin_config: IsobinConfig = serde_yaml::from_str(s).map_err(|e| {
-            IsobinConfigError::new_parse_isobin_config(path.as_ref().into(), e.into())
-        })?;
-        Ok(isobin_config)
     }
 }
 
@@ -123,28 +86,59 @@ mod tests {
     }
 
     #[rstest]
-    #[case(include_str!("testdata/isobin_configs/default_load.toml"),ConfigFileExtensions::Toml,"foo.toml",tool_config(cargo_install_dependencies()))]
-    #[case(include_str!("testdata/isobin_configs/default_load.yaml"),ConfigFileExtensions::Yaml,"foo.yaml",tool_config(cargo_install_dependencies()))]
-    fn isobin_config_from_str_works(
-        #[case] config_str: &str,
+    #[case(
+        ConfigFileExtensions::Toml,
+        "testdata/isobin_configs/default_load.toml",
+        tool_config(cargo_install_dependencies())
+    )]
+    #[case(
+        ConfigFileExtensions::Yaml,
+        "testdata/isobin_configs/default_load.yaml",
+        tool_config(cargo_install_dependencies())
+    )]
+    async fn isobin_config_from_str_works(
         #[case] ft: ConfigFileExtensions,
-        #[case] path: &str,
+        #[case] path: impl AsRef<Path>,
         #[case] expected: IsobinConfig,
     ) {
-        let actual = IsobinConfig::parse(config_str, ft, path).unwrap();
+        let path = current_source_dir!().join(path);
+        let actual = IsobinConfig::parse(ft, path).await.unwrap();
         pretty_assertions::assert_eq!(expected, actual);
     }
 
+    fn with_current_source_dir(path: &str) -> PathBuf {
+        let r = current_source_dir!().join(path);
+        r
+    }
+
     #[rstest]
-    #[case(include_str!("testdata/isobin_configs/default_load.yaml"),ConfigFileExtensions::Toml,"foo.toml",IsobinConfigError::new_parse_isobin_config("foo.toml".into(),anyhow!("expected an equals, found a colon at line 1 column 6")))]
-    #[case(include_str!("testdata/isobin_configs/default_load.toml"),ConfigFileExtensions::Yaml,"foo.yaml",IsobinConfigError::new_parse_isobin_config("foo.yaml".into(),anyhow!("did not find expected <document start> at line 2 column 1\n\nCaused by:\n    did not find expected <document start> at line 2 column 1")))]
-    fn isobin_config_from_str_error_works(
-        #[case] config_str: &str,
+    #[case(
+        ConfigFileExtensions::Toml,
+        "testdata/isobin_configs/default_load.yaml",
+        IsobinConfigError::new_serde(
+            SerdeExtError::new_deserialize_with_hint(
+                anyhow!("expected an equals, found a colon at line 1 column 6"),
+                with_current_source_dir("testdata/isobin_configs/default_load.yaml"),
+                    "cargo:\n_____^\n".into()),
+            ),
+        )]
+    #[case(
+        ConfigFileExtensions::Yaml,
+        "testdata/isobin_configs/default_load.toml",
+        IsobinConfigError::new_serde(
+            SerdeExtError::new_deserialize_with_hint(
+                anyhow!("did not find expected <document start> at line 2 column 1\n\nCaused by:\n    did not find expected <document start> at line 2 column 1"),
+                with_current_source_dir("testdata/isobin_configs/default_load.toml"),
+                    "[cargo.installs]\ncargo-make = \"2.0\"\ncomrak = \"1.0\"\n_^\n".into()),
+            ),
+        )]
+    async fn isobin_config_from_str_error_works(
         #[case] ft: ConfigFileExtensions,
-        #[case] path: &str,
+        #[case] path: impl AsRef<Path>,
         #[case] expected: IsobinConfigError,
     ) {
-        let result = IsobinConfig::parse(config_str, ft, path);
+        let path = current_source_dir!().join(path);
+        let result = IsobinConfig::parse(ft, path).await;
         assert_error_result!(expected, result);
     }
 
@@ -192,44 +186,6 @@ mod tests {
     #[fixture]
     fn empty_cargos() -> Vec<(String, CargoInstallDependency)> {
         return vec![];
-    }
-
-    #[rstest]
-    #[case(include_str!("testdata/isobin_configs/default_load.toml"),tool_config(cargo_install_dependencies()))]
-    #[case(include_str!("testdata/isobin_configs/description_load.toml"),tool_config(table_cargos()))]
-    #[case(include_str!("testdata/isobin_configs/empty.toml"),tool_config(empty_cargos()))]
-    #[case(include_str!("testdata/isobin_configs/empty_cargo.toml"),tool_config(empty_cargos()))]
-    fn isobin_config_from_toml_str_works(
-        #[case] config_toml_str: &str,
-        #[values("foo.toml")] path: &str,
-        #[case] expected: IsobinConfig,
-    ) {
-        let actual = IsobinConfig::parse_toml(config_toml_str, path).unwrap();
-        pretty_assertions::assert_eq!(expected, actual);
-    }
-
-    #[rstest]
-    #[case(include_str!("testdata/isobin_configs/default_load.yaml"),tool_config(cargo_install_dependencies()))]
-    #[case(include_str!("testdata/isobin_configs/description_load.yaml"),tool_config(table_cargos()))]
-    fn isobin_config_from_yaml_str_works(
-        #[case] config_toml_str: &str,
-        #[values("foo.yaml")] path: &str,
-        #[case] expected: IsobinConfig,
-    ) {
-        let actual = IsobinConfig::parse_yaml(config_toml_str, path).unwrap();
-        pretty_assertions::assert_eq!(expected, actual);
-    }
-
-    #[rstest]
-    #[case(include_str!("testdata/isobin_configs/empty.yaml"),IsobinConfigError::new_parse_isobin_config("foo.yaml".into(), anyhow!("EOF while parsing a value")))]
-    #[case(include_str!("testdata/isobin_configs/empty_cargo.yaml"),IsobinConfigError::new_parse_isobin_config("foo.yaml".into(),anyhow!("cargo.installs: invalid type: unit value, expected a map at line 3 column 1")))]
-    fn isobin_config_from_yaml_str_error_works(
-        #[case] config_toml_str: &str,
-        #[values("foo.yaml")] path: &str,
-        #[case] expected: IsobinConfigError,
-    ) {
-        let result = IsobinConfig::parse_yaml(config_toml_str, path);
-        assert_error_result!(expected, result);
     }
 
     #[rstest]
