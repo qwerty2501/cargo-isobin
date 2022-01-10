@@ -1,7 +1,7 @@
 use super::*;
 use crate::utils::{
     io_ext,
-    serde_ext::{SerdeExtError, Toml, Yaml},
+    serde_ext::{Json, SerdeExtError, Toml, Yaml},
 };
 use async_std::path::Path;
 
@@ -46,9 +46,11 @@ impl IsobinConfig {
         const TOML_EXTENSION: &str = "toml";
         const YAML_EXTENSION: &str = "yaml";
         const YML_EXTENSION: &str = "yml";
+        const JSON_EXTENSION: &str = "json";
         match extension {
             TOML_EXTENSION => Ok(ConfigFileExtensions::Toml),
             YML_EXTENSION | YAML_EXTENSION => Ok(ConfigFileExtensions::Yaml),
+            JSON_EXTENSION => Ok(ConfigFileExtensions::Json),
             _ => Err(IsobinConfigError::new_unknown_file_extension(
                 io_ext::path_to_string(path.as_ref()),
                 extension.to_string(),
@@ -63,6 +65,7 @@ impl IsobinConfig {
         match file_extension {
             ConfigFileExtensions::Toml => Ok(Toml::parse_from_file(path).await?),
             ConfigFileExtensions::Yaml => Ok(Yaml::parse_from_file(path).await?),
+            ConfigFileExtensions::Json => Ok(Json::parse_from_file(path).await?),
         }
     }
 }
@@ -71,6 +74,7 @@ impl IsobinConfig {
 enum ConfigFileExtensions {
     Yaml,
     Toml,
+    Json,
 }
 
 #[cfg(test)]
