@@ -9,12 +9,17 @@ pub struct Json;
 
 impl Json {
     #[allow(dead_code)]
-    pub async fn save<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<()> {
+    pub async fn save_to_file<T: serde::Serialize>(
+        value: &T,
+        path: impl AsRef<Path>,
+    ) -> Result<()> {
         write_str_for_serialize(&(Self::serialize_string(value, path.as_ref())?), path).await
     }
 
     #[allow(dead_code)]
-    pub async fn parse<T: serde::de::DeserializeOwned>(path: impl AsRef<Path>) -> Result<T> {
+    pub async fn parse_from_file<T: serde::de::DeserializeOwned>(
+        path: impl AsRef<Path>,
+    ) -> Result<T> {
         let s = read_string_for_deserialize(path.as_ref()).await?;
         Self::deserialize_str(&s, path)
     }
@@ -23,7 +28,7 @@ impl Json {
     pub async fn parse_or_default_if_not_found<T: serde::de::DeserializeOwned + Default>(
         path: impl AsRef<Path>,
     ) -> Result<T> {
-        default_if_not_found(Self::parse(path).await)
+        default_if_not_found(Self::parse_from_file(path).await)
     }
 
     fn serialize_string<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<String> {
@@ -42,12 +47,17 @@ pub struct Yaml;
 
 impl Yaml {
     #[allow(dead_code)]
-    pub async fn save<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<()> {
+    pub async fn save_to_file<T: serde::Serialize>(
+        value: &T,
+        path: impl AsRef<Path>,
+    ) -> Result<()> {
         write_str_for_serialize(&(Self::serialize_string(value, path.as_ref())?), path).await
     }
 
     #[allow(dead_code)]
-    pub async fn parse<T: serde::de::DeserializeOwned>(path: impl AsRef<Path>) -> Result<T> {
+    pub async fn parse_from_file<T: serde::de::DeserializeOwned>(
+        path: impl AsRef<Path>,
+    ) -> Result<T> {
         let s = read_string_for_deserialize(path.as_ref()).await?;
         Self::deserialize_str(&s, path)
     }
@@ -56,7 +66,7 @@ impl Yaml {
     pub async fn parse_or_default_if_not_found<T: serde::de::DeserializeOwned + Default>(
         path: impl AsRef<Path>,
     ) -> Result<T> {
-        default_if_not_found(Self::parse(path).await)
+        default_if_not_found(Self::parse_from_file(path).await)
     }
     fn serialize_string<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<String> {
         serde_yaml::to_string(value)
@@ -74,12 +84,17 @@ pub struct Toml;
 
 impl Toml {
     #[allow(dead_code)]
-    pub async fn save<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<()> {
+    pub async fn save_to_file<T: serde::Serialize>(
+        value: &T,
+        path: impl AsRef<Path>,
+    ) -> Result<()> {
         write_str_for_serialize(&(Self::serialize_string(value, path.as_ref())?), path).await
     }
 
     #[allow(dead_code)]
-    pub async fn parse<T: serde::de::DeserializeOwned>(path: impl AsRef<Path>) -> Result<T> {
+    pub async fn parse_from_file<T: serde::de::DeserializeOwned>(
+        path: impl AsRef<Path>,
+    ) -> Result<T> {
         let s = read_string_for_deserialize(path.as_ref()).await?;
         Self::deserialize_str(&s, path)
     }
@@ -88,7 +103,7 @@ impl Toml {
     pub async fn parse_or_default_if_not_found<T: serde::de::DeserializeOwned + Default>(
         path: impl AsRef<Path>,
     ) -> Result<T> {
-        default_if_not_found(Self::parse(path).await)
+        default_if_not_found(Self::parse_from_file(path).await)
     }
 
     fn serialize_string<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<String> {
