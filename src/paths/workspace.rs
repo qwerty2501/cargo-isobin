@@ -36,7 +36,7 @@ pub async fn unique_isobin_workspace_dir(isobin_config_dir: impl AsRef<Path>) ->
 
 #[derive(Deserialize, Serialize, Default, Debug)]
 struct WorkspacePathMap {
-    #[serde(default)]
+    #[serde(default, flatten)]
     workspace_path_map: HashMap<String, String>,
 }
 
