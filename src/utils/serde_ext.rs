@@ -19,6 +19,13 @@ impl Json {
         Self::deserialize_str(&s, path)
     }
 
+    #[allow(dead_code)]
+    pub async fn parse_or_default_if_not_found<T: serde::de::DeserializeOwned + Default>(
+        path: impl AsRef<Path>,
+    ) -> Result<T> {
+        default_if_not_found(Self::parse(path).await)
+    }
+
     fn serialize_string<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<String> {
         serde_json::to_string(value)
             .map_err(|e| SerdeExtError::new_serialize(e.into(), path.as_ref().into()))
@@ -45,6 +52,12 @@ impl Yaml {
         Self::deserialize_str(&s, path)
     }
 
+    #[allow(dead_code)]
+    pub async fn parse_or_default_if_not_found<T: serde::de::DeserializeOwned + Default>(
+        path: impl AsRef<Path>,
+    ) -> Result<T> {
+        default_if_not_found(Self::parse(path).await)
+    }
     fn serialize_string<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<String> {
         serde_yaml::to_string(value)
             .map_err(|e| SerdeExtError::new_serialize(e.into(), path.as_ref().into()))
@@ -69,6 +82,13 @@ impl Toml {
     pub async fn parse<T: serde::de::DeserializeOwned>(path: impl AsRef<Path>) -> Result<T> {
         let s = read_string_for_deserialize(path.as_ref()).await?;
         Self::deserialize_str(&s, path)
+    }
+
+    #[allow(dead_code)]
+    pub async fn parse_or_default_if_not_found<T: serde::de::DeserializeOwned + Default>(
+        path: impl AsRef<Path>,
+    ) -> Result<T> {
+        default_if_not_found(Self::parse(path).await)
     }
 
     fn serialize_string<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<String> {
@@ -206,6 +226,19 @@ async fn read_string_for_deserialize(path: impl AsRef<Path>) -> Result<String> {
         .await
         .map_err(|e| convert_io_error(e, path))?;
     Ok(s)
+}
+
+fn default_if_not_found<T: Default>(result: Result<T>) -> Result<T> {
+    match result {
+        Ok(v) => Ok(v),
+        Err(err) => {
+            if let SerdeExtError::NotFound { error: _, path: _ } = err {
+                Ok(Default::default())
+            } else {
+                Err(err)
+            }
+        }
+    }
 }
 
 #[cfg(test)]
