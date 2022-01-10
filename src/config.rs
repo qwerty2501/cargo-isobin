@@ -1,6 +1,9 @@
 use super::*;
-use crate::utils::serde_ext::{SerdeExtError, Toml, Yaml};
-use async_std::path::{Path, PathBuf};
+use crate::utils::{
+    io_ext,
+    serde_ext::{SerdeExtError, Toml, Yaml},
+};
+use async_std::path::Path;
 
 use providers::cargo::CargoConfig;
 use serde_derive::{Deserialize, Serialize};
@@ -15,11 +18,11 @@ pub struct IsobinConfig {
 pub enum IsobinConfigError {
     #[error("{0}")]
     Serde(#[from] SerdeExtError),
-    #[error("The target file does not have extension\npath:{path:?}")]
-    NothingFileExtension { path: PathBuf },
+    #[error("The target file does not have extension\npath:{path}")]
+    NothingFileExtension { path: String },
 
-    #[error("The target file has unknown extension\npath:{path:?}\nextension:{extension}")]
-    UnknownFileExtension { path: PathBuf, extension: String },
+    #[error("The target file has unknown extension\npath:{path}\nextension:{extension}")]
+    UnknownFileExtension { path: String, extension: String },
 }
 
 type Result<T> = std::result::Result<T, IsobinConfigError>;
@@ -36,7 +39,9 @@ impl IsobinConfig {
             .as_ref()
             .extension()
             .and_then(|ext| ext.to_str())
-            .ok_or_else(|| IsobinConfigError::new_nothing_file_extension(path.as_ref().into()))?;
+            .ok_or_else(|| {
+                IsobinConfigError::new_nothing_file_extension(io_ext::path_to_string(path.as_ref()))
+            })?;
 
         const TOML_EXTENSION: &str = "toml";
         const YAML_EXTENSION: &str = "yaml";
@@ -45,7 +50,7 @@ impl IsobinConfig {
             TOML_EXTENSION => Ok(ConfigFileExtensions::Toml),
             YML_EXTENSION | YAML_EXTENSION => Ok(ConfigFileExtensions::Yaml),
             _ => Err(IsobinConfigError::new_unknown_file_extension(
-                path.as_ref().into(),
+                io_ext::path_to_string(path.as_ref()),
                 extension.to_string(),
             )),
         }
@@ -70,6 +75,8 @@ enum ConfigFileExtensions {
 
 #[cfg(test)]
 mod tests {
+    use crate::utils::io_ext;
+
     use super::*;
     use anyhow::anyhow;
     use providers::cargo::{CargoInstallDependency, CargoInstallDependencyDetail};
@@ -106,9 +113,9 @@ mod tests {
         pretty_assertions::assert_eq!(expected, actual);
     }
 
-    fn with_current_source_dir(path: &str) -> PathBuf {
+    fn with_current_source_dir(path: &str) -> String {
         let r = current_source_dir!().join(path);
-        r
+        io_ext::path_to_string(r)
     }
 
     #[rstest]

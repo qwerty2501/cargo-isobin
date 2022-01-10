@@ -1,7 +1,8 @@
 use super::*;
 use async_std::fs::File;
 use async_std::io::{self, ReadExt, WriteExt};
-use async_std::path::{Path, PathBuf};
+use async_std::path::Path;
+use io_ext::path_to_string;
 use utils::fs_ext;
 
 #[allow(dead_code)]
@@ -33,7 +34,7 @@ impl Json {
 
     fn serialize_string<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<String> {
         serde_json::to_string(value)
-            .map_err(|e| SerdeExtError::new_serialize(e.into(), path.as_ref().into()))
+            .map_err(|e| SerdeExtError::new_serialize(e.into(), path_to_string(path)))
     }
     fn deserialize_str<T: serde::de::DeserializeOwned>(
         s: &str,
@@ -70,7 +71,7 @@ impl Yaml {
     }
     fn serialize_string<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<String> {
         serde_yaml::to_string(value)
-            .map_err(|e| SerdeExtError::new_serialize(e.into(), path.as_ref().into()))
+            .map_err(|e| SerdeExtError::new_serialize(e.into(), path_to_string(path)))
     }
     pub fn deserialize_str<T: serde::de::DeserializeOwned>(
         s: &str,
@@ -108,7 +109,7 @@ impl Toml {
 
     fn serialize_string<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<String> {
         toml::to_string(value)
-            .map_err(|e| SerdeExtError::new_serialize(e.into(), path.as_ref().into()))
+            .map_err(|e| SerdeExtError::new_serialize(e.into(), path_to_string(path)))
     }
     fn deserialize_str<T: serde::de::DeserializeOwned>(
         s: &str,
@@ -120,44 +121,44 @@ impl Toml {
 
 #[derive(thiserror::Error, Debug, new)]
 pub enum SerdeExtError {
-    #[error("Not found file\npath:{path:?}")]
+    #[error("Not found file\npath:{path}")]
     NotFound {
         #[source]
         error: anyhow::Error,
-        path: PathBuf,
+        path: String,
     },
-    #[error("An io error occurred\npath:{path:?}\nerror:{error}")]
+    #[error("An io error occurred\npath:{path}\nerror:{error}")]
     Io {
         #[source]
         error: anyhow::Error,
-        path: PathBuf,
+        path: String,
     },
-    #[error("An deserialize error occurred\npath:{path:?}\nerror:{error}\n{hint}")]
+    #[error("An deserialize error occurred\npath:{path}\nerror:{error}\n{hint}")]
     DeserializeWithHint {
         #[source]
         error: anyhow::Error,
-        path: PathBuf,
+        path: String,
         hint: String,
     },
-    #[error("An deserialize error occurred\npath:{path:?}\nerror:{error}")]
+    #[error("An deserialize error occurred\npath:{path}\nerror:{error}")]
     Deserialize {
         #[source]
         error: anyhow::Error,
-        path: PathBuf,
+        path: String,
     },
-    #[error("An serialize error occurred\npath:{path:?}\nerror:{error}")]
+    #[error("An serialize error occurred\npath:{path}\nerror:{error}")]
     Serialize {
         #[source]
         error: anyhow::Error,
-        path: PathBuf,
+        path: String,
     },
 }
 
 fn convert_io_error(e: io::Error, path: impl AsRef<Path>) -> SerdeExtError {
     if e.kind() == io::ErrorKind::NotFound {
-        SerdeExtError::new_not_found(e.into(), path.as_ref().into())
+        SerdeExtError::new_not_found(e.into(), path_to_string(path))
     } else {
-        SerdeExtError::new_io(e.into(), path.as_ref().into())
+        SerdeExtError::new_io(e.into(), path_to_string(path))
     }
 }
 
@@ -168,9 +169,9 @@ fn convert_deserialize_json_error(
 ) -> SerdeExtError {
     if e.is_data() || e.is_syntax() {
         let hint = make_hint_string(s, e.line(), e.column());
-        SerdeExtError::new_deserialize_with_hint(e.into(), path.as_ref().into(), hint)
+        SerdeExtError::new_deserialize_with_hint(e.into(), path_to_string(path), hint)
     } else {
-        SerdeExtError::new_deserialize(e.into(), path.as_ref().into())
+        SerdeExtError::new_deserialize(e.into(), path_to_string(path))
     }
 }
 
@@ -181,9 +182,9 @@ fn convert_deserialize_yaml_error(
 ) -> SerdeExtError {
     if let Some(location) = e.location() {
         let hint = make_hint_string(s, location.line(), location.column());
-        SerdeExtError::new_deserialize_with_hint(e.into(), path.as_ref().into(), hint)
+        SerdeExtError::new_deserialize_with_hint(e.into(), path_to_string(path), hint)
     } else {
-        SerdeExtError::new_deserialize(e.into(), path.as_ref().into())
+        SerdeExtError::new_deserialize(e.into(), path_to_string(path))
     }
 }
 
@@ -194,9 +195,9 @@ fn convert_deserialize_toml_error(
 ) -> SerdeExtError {
     if let Some((line, col)) = e.line_col() {
         let hint = make_hint_string(s, line, col);
-        SerdeExtError::new_deserialize_with_hint(e.into(), path.as_ref().into(), hint)
+        SerdeExtError::new_deserialize_with_hint(e.into(), path_to_string(path), hint)
     } else {
-        SerdeExtError::new_deserialize(e.into(), path.as_ref().into())
+        SerdeExtError::new_deserialize(e.into(), path_to_string(path))
     }
 }
 
