@@ -11,6 +11,7 @@ async-std = { version = "1.10.0", features = ["attributes"] }
 async-trait = "0.1.52"
 cargo_toml = "0.10.3"
 clap = { version = "3.0.2", features = ["derive"] }
+derive-getters = "0.2.0"
 derive-new = "0.5.9"
 directories = "4.0.1"
 nanoid = "0.4.0"

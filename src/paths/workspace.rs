@@ -9,12 +9,33 @@ use nanoid::nanoid;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[derive(Getters, Clone, PartialEq, Debug)]
+pub struct WorkSpace {
+    base_dir: PathBuf,
+    tmp_dir: PathBuf,
+    home_dir: PathBuf,
+}
+
+impl WorkSpace {
+    fn new(base_unique_workspace_dir: PathBuf) -> Self {
+        Self {
+            base_dir: base_unique_workspace_dir.clone(),
+            tmp_dir: base_unique_workspace_dir.join("tmp"),
+            home_dir: base_unique_workspace_dir.join("home"),
+        }
+    }
+    #[allow(dead_code)]
+    pub async fn try_from_isobin_config_dir(isobin_config_dir: impl AsRef<Path>) -> Result<Self> {
+        let base_unique_workspace_dir = unique_isobin_workspace_dir(isobin_config_dir).await?;
+        Ok(Self::new(base_unique_workspace_dir))
+    }
+}
+
 fn workspace_dir() -> PathBuf {
     projects::cache_dir().join("workspace")
 }
 
-#[allow(dead_code)]
-pub async fn unique_isobin_workspace_dir(isobin_config_dir: impl AsRef<Path>) -> Result<PathBuf> {
+async fn unique_isobin_workspace_dir(isobin_config_dir: impl AsRef<Path>) -> Result<PathBuf> {
     let mut workspace_path_map = WorkspacePathMap::load().await?;
     let id = if let Some(id) = workspace_path_map
         .workspace_path_map
@@ -109,5 +130,24 @@ impl WorkspacePathMap {
     fn serialize(workspace_path_map: &Self, path: impl AsRef<Path>) -> Result<String> {
         serde_json::to_string(workspace_path_map)
             .map_err(|e| PathsError::new_save_workspace_map(path.as_ref().into(), e.into()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[rstest]
+    #[case("/home/user_name/.cache/332334".into(),WorkSpace{
+        base_dir:"/home/user_name/.cache/332334".into(),
+        tmp_dir:"/home/user_name/.cache/332334/tmp".into(),
+        home_dir:"/home/user_name/.cache/332334/home".into(),
+    })]
+    fn workspace_new_works(
+        #[case] base_unique_workspace_dir: PathBuf,
+        #[case] expected: WorkSpace,
+    ) {
+        let actual = WorkSpace::new(base_unique_workspace_dir);
+        pretty_assertions::assert_eq!(expected, actual);
     }
 }

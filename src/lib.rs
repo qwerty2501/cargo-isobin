@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate derive_new;
 
+#[macro_use]
+extern crate derive_getters;
+
 mod config;
 mod installer;
 mod macros;
