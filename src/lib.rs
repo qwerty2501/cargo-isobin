@@ -2,9 +2,7 @@
 extern crate derive_new;
 
 mod config;
-mod errors;
 mod installer;
-pub mod isobin;
 mod macros;
 mod paths;
 pub mod providers;
