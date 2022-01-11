@@ -31,7 +31,6 @@ impl Workspace {
 
 pub struct WorkspaceProvider {
     project: Project,
-    workspace_dir: PathBuf,
 }
 
 impl WorkspaceProvider {
@@ -57,7 +56,7 @@ impl WorkspaceProvider {
                 .await?;
             id
         };
-        let base_unique_workspace_dir = self.workspace_dir.join(&id);
+        let base_unique_workspace_dir = self.project.data_local_dir().join(&id);
         let unique_cache_dir = self.project.cache_dir().join(&id);
         Ok(Workspace::new(
             id,
@@ -68,10 +67,7 @@ impl WorkspaceProvider {
 
     #[allow(dead_code)]
     pub fn new(project: Project) -> Self {
-        Self {
-            workspace_dir: project.data_local_dir().join("workspace"),
-            project,
-        }
+        Self { project }
     }
 }
 
