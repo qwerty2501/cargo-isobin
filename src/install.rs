@@ -1,5 +1,33 @@
+use crate::paths::project::Project;
+
 use super::*;
 use async_std::sync::Arc;
+
+#[derive(PartialEq)]
+pub enum InstallMode {
+    All,
+    SpecificInstallTargetsOnly {
+        specific_install_targets: Vec<String>,
+    },
+}
+
+#[derive(new, Default)]
+pub struct InstallService {
+    #[allow(dead_code)]
+    project: Project,
+}
+
+impl InstallService {
+    #[allow(unused_variables)]
+    pub async fn execute(
+        &self,
+        service_option: &ServiceOption,
+        install_service_option: &InstallServiceOption,
+    ) -> Result<()> {
+        let isobin_config_path = service_option.isobin_config_path();
+        todo!()
+    }
+}
 
 pub struct InstallRunnerProvider;
 
@@ -35,10 +63,34 @@ impl<I: providers::Installer> InstallRunner for InstallRunnerImpl<I> {
     }
 }
 
-type Result<T> = std::result::Result<T, InstallRunError>;
+#[derive(Getters)]
+pub struct InstallServiceOption {
+    mode: InstallMode,
+}
+
+pub struct InstallServiceOptionBuilder {
+    mode: Option<InstallMode>,
+}
+
+impl InstallServiceOptionBuilder {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        Self { mode: None }
+    }
+    pub fn mode(self, mode: InstallMode) -> Self {
+        InstallServiceOptionBuilder { mode: Some(mode) }
+    }
+    pub fn build(self) -> InstallServiceOption {
+        InstallServiceOption {
+            mode: self.mode.unwrap_or(InstallMode::All),
+        }
+    }
+}
+
+type Result<T> = std::result::Result<T, InstallServiceError>;
 
 #[derive(thiserror::Error, Debug, new)]
-pub enum InstallRunError {
+pub enum InstallServiceError {
     #[error("{0}")]
     Install(#[from] providers::InstallError),
 }
