@@ -41,6 +41,34 @@ impl<I: Installer> MultiInstaller for SequenceMultiInstaller<I> {
     }
 }
 
+pub struct ParallelMultiInstaller<I>(PhantomData<I>);
+
+#[async_trait]
+impl<I: Installer> MultiInstaller for ParallelMultiInstaller<I> {
+    type Installer = I;
+    async fn installs(installer: &I, targets: &[I::InstallTarget]) -> Result<()>
+    where
+        I: Installer,
+    {
+        let mut target_futures = Vec::with_capacity(targets.len());
+        for target in targets.iter() {
+            target_futures.push(installer.install(target));
+        }
+        let mut target_errors = vec![];
+        for target_future in target_futures.into_iter() {
+            let result = target_future.await;
+            if let Some(err) = result.err() {
+                target_errors.push(err);
+            }
+        }
+        if !target_errors.is_empty() {
+            Err(InstallError::Multi(target_errors))
+        } else {
+            Ok(())
+        }
+    }
+}
+
 #[async_trait]
 pub trait InstallTarget: 'static + Send + Sync {
     fn provider_type(&self) -> providers::ProviderKind;
@@ -52,4 +80,6 @@ pub trait InstallTarget: 'static + Send + Sync {
 pub enum InstallError {
     #[error("todo")]
     Todo(),
+    #[error("multi error")]
+    Multi(Vec<InstallError>),
 }
