@@ -13,15 +13,17 @@ use std::collections::HashMap;
 pub struct Workspace {
     id: String,
     base_dir: PathBuf,
+    cache_dir: PathBuf,
     home_dir: PathBuf,
 }
 
 impl Workspace {
     #[allow(dead_code)]
-    fn new(id: String, base_unique_workspace_dir: PathBuf) -> Self {
+    fn new(id: String, base_unique_workspace_dir: PathBuf, unique_cache_dir: PathBuf) -> Self {
         Self {
             id,
             home_dir: base_unique_workspace_dir.join("home"),
+            cache_dir: unique_cache_dir,
             base_dir: base_unique_workspace_dir,
         }
     }
@@ -56,7 +58,12 @@ impl WorkspaceProvider {
             id
         };
         let base_unique_workspace_dir = self.workspace_dir.join(&id);
-        Ok(Workspace::new(id, base_unique_workspace_dir))
+        let unique_cache_dir = self.project.cache_dir().join(&id);
+        Ok(Workspace::new(
+            id,
+            base_unique_workspace_dir,
+            unique_cache_dir,
+        ))
     }
 
     #[allow(dead_code)]
@@ -97,17 +104,24 @@ mod tests {
     use super::*;
 
     #[rstest]
-    #[case("332334", "/home/user_name/.cache/332334".into(),Workspace{
-        base_dir:"/home/user_name/.cache/332334".into(),
-        home_dir:"/home/user_name/.cache/332334/home".into(),
-        id:"332334".into(),
-    })]
+    #[case(
+        "332334", 
+        "/home/user_name/.local/share/332334".into(),
+        "/home/user_name/.cache/332334".into(),
+        Workspace{
+            cache_dir:"/home/user_name/.cache/332334".into(),
+            base_dir:"/home/user_name/.local/share/332334".into(),
+            home_dir:"/home/user_name/.local/share/332334/home".into(),
+            id:"332334".into(),
+        }
+    )]
     fn workspace_new_works(
         #[case] id: &str,
         #[case] base_unique_workspace_dir: PathBuf,
+        #[case] unique_cache_dir: PathBuf,
         #[case] expected: Workspace,
     ) {
-        let actual = Workspace::new(id.into(), base_unique_workspace_dir);
+        let actual = Workspace::new(id.into(), base_unique_workspace_dir, unique_cache_dir);
         pretty_assertions::assert_eq!(expected, actual);
     }
 }
