@@ -9,6 +9,7 @@ const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub struct Project {
     config_dir: PathBuf,
     cache_dir: PathBuf,
+    data_local_dir: PathBuf,
 }
 
 impl Default for Project {
@@ -17,6 +18,7 @@ impl Default for Project {
         Self {
             config_dir: pds.config_dir().into(),
             cache_dir: pds.cache_dir().into(),
+            data_local_dir: pds.data_local_dir().into(),
         }
     }
 }

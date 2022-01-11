@@ -11,18 +11,18 @@ use std::collections::HashMap;
 
 #[derive(Getters, Clone, PartialEq, Debug)]
 pub struct Workspace {
+    id: String,
     base_dir: PathBuf,
-    tmp_dir: PathBuf,
     home_dir: PathBuf,
 }
 
 impl Workspace {
     #[allow(dead_code)]
-    fn new(base_unique_workspace_dir: PathBuf) -> Self {
+    fn new(id: String, base_unique_workspace_dir: PathBuf) -> Self {
         Self {
-            base_dir: base_unique_workspace_dir.clone(),
-            tmp_dir: base_unique_workspace_dir.join("tmp"),
+            id,
             home_dir: base_unique_workspace_dir.join("home"),
+            base_dir: base_unique_workspace_dir,
         }
     }
 }
@@ -55,16 +55,14 @@ impl WorkspaceProvider {
                 .await?;
             id
         };
-        let base_unique_workspace_dir = self.workspace_dir.join(id);
-        Ok(Workspace::new(base_unique_workspace_dir))
+        let base_unique_workspace_dir = self.workspace_dir.join(&id);
+        Ok(Workspace::new(id, base_unique_workspace_dir))
     }
-}
 
-impl WorkspaceProvider {
     #[allow(dead_code)]
     pub fn new(project: Project) -> Self {
         Self {
-            workspace_dir: project.cache_dir().join("workspace"),
+            workspace_dir: project.data_local_dir().join("workspace"),
             project,
         }
     }
@@ -99,16 +97,17 @@ mod tests {
     use super::*;
 
     #[rstest]
-    #[case("/home/user_name/.cache/332334".into(),Workspace{
+    #[case("332334", "/home/user_name/.cache/332334".into(),Workspace{
         base_dir:"/home/user_name/.cache/332334".into(),
-        tmp_dir:"/home/user_name/.cache/332334/tmp".into(),
         home_dir:"/home/user_name/.cache/332334/home".into(),
+        id:"332334".into(),
     })]
     fn workspace_new_works(
+        #[case] id: &str,
         #[case] base_unique_workspace_dir: PathBuf,
         #[case] expected: Workspace,
     ) {
-        let actual = Workspace::new(base_unique_workspace_dir);
+        let actual = Workspace::new(id.into(), base_unique_workspace_dir);
         pretty_assertions::assert_eq!(expected, actual);
     }
 }
