@@ -1,10 +1,11 @@
 use crate::paths::isobin_config::search_isobin_config_path;
 use crate::paths::isobin_config::IsobinConfigPathError;
+use crate::{IsobinConfig, IsobinConfigError};
 use async_std::path::{Path, PathBuf};
 
 #[derive(Getters)]
 pub struct ServiceOption {
-    isobin_config_path: PathBuf,
+    isobin_config: IsobinConfig,
 }
 
 pub struct ServiceOptionBuilder {
@@ -31,7 +32,8 @@ impl ServiceOptionBuilder {
             let current_dir = std::env::current_dir().unwrap();
             search_isobin_config_path(current_dir).await?
         };
-        Ok(ServiceOption { isobin_config_path })
+        let isobin_config = IsobinConfig::parse_from_file(isobin_config_path).await?;
+        Ok(ServiceOption { isobin_config })
     }
 }
 
@@ -41,4 +43,6 @@ type Result<T> = std::result::Result<T, ServiceOptionBuildError>;
 pub enum ServiceOptionBuildError {
     #[error("{0}")]
     IsobinPath(#[from] IsobinConfigPathError),
+    #[error("{0}")]
+    IsobinConfig(#[from] IsobinConfigError),
 }

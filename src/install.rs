@@ -19,12 +19,12 @@ pub struct InstallService {
 
 impl InstallService {
     #[allow(unused_variables)]
-    pub async fn execute(
+    pub async fn install(
         &self,
         service_option: &ServiceOption,
         install_service_option: &InstallServiceOption,
     ) -> Result<()> {
-        let isobin_config_path = service_option.isobin_config_path();
+        let isobin_config_path = service_option.isobin_config();
         todo!()
     }
 }

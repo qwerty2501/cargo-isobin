@@ -40,7 +40,7 @@ impl Application {
                     })
                     .build();
                 self.install_service
-                    .execute(&service_option, &install_service_option)
+                    .install(&service_option, &install_service_option)
                     .await?;
                 Ok(())
             }
