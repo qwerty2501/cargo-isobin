@@ -1,8 +1,11 @@
 use async_std::path::Path;
 use async_std::path::PathBuf;
+use std::cmp::Ordering;
 
 pub async fn search_isobin_config_path(current_dir: impl AsRef<Path>) -> Result<PathBuf> {
     let mut current_dir = current_dir.as_ref();
+    // TODO: Currently, rust can not call recursively async function.
+    // Fix this loop when rust can call recursively async function in the future,
     loop {
         let dir_str = current_dir.to_str().unwrap_or("");
         if dir_str.is_empty() {
@@ -19,21 +22,23 @@ pub async fn search_isobin_config_path(current_dir: impl AsRef<Path>) -> Result<
                 exists_isobin_paths.push(ipf.0);
             }
         }
-        if exists_isobin_paths.len() > 1 {
-            return Err(IsobinConfigPathError::Conflict(
-                exists_isobin_paths
-                    .iter()
-                    .map(|ei| ei.to_str().unwrap_or("").to_string())
-                    .collect(),
-            ));
-        } else if exists_isobin_paths.is_empty() {
-            if let Some(parent_dir) = current_dir.parent() {
-                current_dir = parent_dir
-            } else {
-                return Err(IsobinConfigPathError::NotFoundIsobinConfig);
+        match exists_isobin_paths.len().cmp(&1) {
+            Ordering::Equal => return Ok(exists_isobin_paths[0].clone()),
+            Ordering::Greater => {
+                return Err(IsobinConfigPathError::Conflict(
+                    exists_isobin_paths
+                        .iter()
+                        .map(|ei| ei.to_str().unwrap_or("").to_string())
+                        .collect(),
+                ))
             }
-        } else {
-            return Ok(exists_isobin_paths[0].clone());
+            Ordering::Less => {
+                if let Some(parent_dir) = current_dir.parent() {
+                    current_dir = parent_dir
+                } else {
+                    return Err(IsobinConfigPathError::NotFoundIsobinConfig);
+                }
+            }
         }
     }
 }
