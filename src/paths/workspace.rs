@@ -1,6 +1,8 @@
 use crate::utils::serde_ext::Json;
 
 use super::*;
+use project::Project;
+
 use async_std::path::{Path, PathBuf};
 use errors::Result;
 use nanoid::nanoid;
@@ -25,9 +27,8 @@ impl Workspace {
     }
 }
 
-#[derive(new)]
 pub struct WorkspaceProvider {
-    config_dir: PathBuf,
+    project: Project,
     workspace_dir: PathBuf,
 }
 
@@ -38,7 +39,7 @@ impl WorkspaceProvider {
         isobin_config_dir: impl AsRef<Path>,
     ) -> Result<Workspace> {
         let mut workspace_path_map =
-            WorkspacePathMap::parse_from_config_dir(&self.config_dir).await?;
+            WorkspacePathMap::parse_from_config_dir(self.project.config_dir()).await?;
         let id = if let Some(id) = workspace_path_map
             .workspace_path_map
             .get(isobin_config_dir.as_ref().to_str().unwrap())
@@ -50,7 +51,8 @@ impl WorkspaceProvider {
                 isobin_config_dir.as_ref().to_str().unwrap().into(),
                 id.to_string(),
             );
-            WorkspacePathMap::save_to_config_dir(&workspace_path_map, &self.config_dir).await?;
+            WorkspacePathMap::save_to_config_dir(&workspace_path_map, self.project.config_dir())
+                .await?;
             id
         };
         let base_unique_workspace_dir = self.workspace_dir.join(id);
@@ -58,9 +60,14 @@ impl WorkspaceProvider {
     }
 }
 
-#[allow(dead_code)]
-pub fn workspace_dir() -> PathBuf {
-    projects::cache_dir().join("workspace")
+impl WorkspaceProvider {
+    #[allow(dead_code)]
+    pub fn new(project: Project) -> Self {
+        Self {
+            workspace_dir: project.cache_dir().join("workspace"),
+            project,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Default, Debug)]
