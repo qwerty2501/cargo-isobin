@@ -1,5 +1,4 @@
 use super::*;
-type Result<T> = std::result::Result<T, InstallError>;
 #[async_trait]
 pub trait Installer: 'static + Send + Sync {
     type InstallTarget: InstallTarget;
@@ -16,9 +15,3 @@ pub enum MultiInstallMode {
 
 #[async_trait]
 pub trait InstallTarget: 'static + Send + Sync {}
-
-#[derive(thiserror::Error, Debug, new)]
-pub enum InstallError {
-    #[error("todo")]
-    Todo(),
-}

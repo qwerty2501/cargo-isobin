@@ -4,7 +4,6 @@ use super::*;
 use project::Project;
 
 use async_std::path::{Path, PathBuf};
-use errors::Result;
 use nanoid::nanoid;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;

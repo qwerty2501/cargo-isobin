@@ -72,7 +72,7 @@ impl<I: providers::Installer> InstallRunnerImpl<I> {
             }
         }
         if !target_errors.is_empty() {
-            Err(InstallServiceError::MultiInstall(target_errors))
+            Err(InstallServiceError::MultiInstall(target_errors).into())
         } else {
             Ok(())
         }
@@ -117,13 +117,8 @@ impl InstallServiceOptionBuilder {
     }
 }
 
-type Result<T> = std::result::Result<T, InstallServiceError>;
-
 #[derive(thiserror::Error, Debug, new)]
 pub enum InstallServiceError {
-    #[error("{0}")]
-    Install(#[from] providers::InstallError),
-
     #[error("occurred multi error")]
-    MultiInstall(Vec<providers::InstallError>),
+    MultiInstall(Vec<Error>),
 }

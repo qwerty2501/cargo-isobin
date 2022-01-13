@@ -5,13 +5,17 @@ extern crate derive_new;
 extern crate derive_getters;
 
 mod config;
+mod errors;
 mod install;
 mod macros;
 mod paths;
 pub mod providers;
+mod result;
 mod service_option;
 mod utils;
+pub use errors::*;
 pub use install::*;
+pub use result::*;
 pub use service_option::*;
 
 use async_trait::async_trait;

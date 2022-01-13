@@ -1,7 +1,7 @@
 use super::*;
 use crate::utils::{
     io_ext,
-    serde_ext::{Json, SerdeExtError, Toml, Yaml},
+    serde_ext::{Json, Toml, Yaml},
 };
 use async_std::path::Path;
 
@@ -16,16 +16,12 @@ pub struct IsobinConfig {
 
 #[derive(thiserror::Error, Debug, new)]
 pub enum IsobinConfigError {
-    #[error("{0}")]
-    Serde(#[from] SerdeExtError),
     #[error("The target file does not have extension\npath:{path}")]
     NothingFileExtension { path: String },
 
     #[error("The target file has unknown extension\npath:{path}\nextension:{extension}")]
     UnknownFileExtension { path: String, extension: String },
 }
-
-type Result<T> = std::result::Result<T, IsobinConfigError>;
 
 impl IsobinConfig {
     #[allow(dead_code)]
@@ -54,7 +50,8 @@ impl IsobinConfig {
             _ => Err(IsobinConfigError::new_unknown_file_extension(
                 io_ext::path_to_string(path.as_ref()),
                 extension.to_string(),
-            )),
+            )
+            .into()),
         }
     }
 
@@ -84,6 +81,8 @@ mod tests {
     use super::*;
     use anyhow::anyhow;
     use providers::cargo::{CargoInstallDependency, CargoInstallDependencyDetail};
+
+    use utils::serde_ext::SerdeExtError;
 
     #[rstest]
     #[case(
@@ -126,7 +125,7 @@ mod tests {
     #[case(
         ConfigFileExtensions::Toml,
         "testdata/isobin_configs/default_load.yaml",
-        IsobinConfigError::new_serde(
+        Error::new_serde(
             SerdeExtError::new_deserialize_with_hint(
                 anyhow!("expected an equals, found a colon at line 1 column 6"),
                 with_current_source_dir("testdata/isobin_configs/default_load.yaml"),
@@ -136,7 +135,7 @@ mod tests {
     #[case(
         ConfigFileExtensions::Yaml,
         "testdata/isobin_configs/default_load.toml",
-        IsobinConfigError::new_serde(
+        Error::new_serde(
             SerdeExtError::new_deserialize_with_hint(
                 anyhow!("did not find expected <document start> at line 2 column 1\n\nCaused by:\n    did not find expected <document start> at line 2 column 1"),
                 with_current_source_dir("testdata/isobin_configs/default_load.toml"),
@@ -146,7 +145,7 @@ mod tests {
     async fn isobin_config_from_str_error_works(
         #[case] ft: ConfigFileExtensions,
         #[case] path: impl AsRef<Path>,
-        #[case] expected: IsobinConfigError,
+        #[case] expected: Error,
     ) {
         let path = current_source_dir!().join(path);
         let result = IsobinConfig::parse(ft, path).await;
@@ -209,12 +208,9 @@ mod tests {
     }
 
     #[rstest]
-    #[case("foo.fm", IsobinConfigError::new_unknown_file_extension("foo.fm".into(), "fm".into()))]
-    #[case("foo", IsobinConfigError::new_nothing_file_extension("foo".into()))]
-    fn get_config_file_extension_error_works(
-        #[case] path: &str,
-        #[case] expected: IsobinConfigError,
-    ) {
+    #[case("foo.fm", IsobinConfigError::new_unknown_file_extension("foo.fm".into(), "fm".into()).into())]
+    #[case("foo", IsobinConfigError::new_nothing_file_extension("foo".into()).into())]
+    fn get_config_file_extension_error_works(#[case] path: &str, #[case] expected: Error) {
         let result = IsobinConfig::get_file_extension(path);
         assert_error_result!(expected, result);
     }

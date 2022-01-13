@@ -1,3 +1,4 @@
+use super::*;
 use crate::paths::isobin_config::search_isobin_config_path;
 use crate::paths::isobin_config::IsobinConfigPathError;
 use crate::{IsobinConfig, IsobinConfigError};
@@ -36,8 +37,6 @@ impl ServiceOptionBuilder {
         Ok(ServiceOption { isobin_config })
     }
 }
-
-type Result<T> = std::result::Result<T, ServiceOptionBuildError>;
 
 #[derive(thiserror::Error, Debug, new)]
 pub enum ServiceOptionBuildError {

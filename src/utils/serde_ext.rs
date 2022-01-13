@@ -34,13 +34,13 @@ impl Json {
 
     fn serialize_string<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<String> {
         serde_json::to_string(value)
-            .map_err(|e| SerdeExtError::new_serialize(e.into(), path_to_string(path)))
+            .map_err(|e| SerdeExtError::new_serialize(e.into(), path_to_string(path)).into())
     }
     fn deserialize_str<T: serde::de::DeserializeOwned>(
         s: &str,
         path: impl AsRef<Path>,
     ) -> Result<T> {
-        serde_json::from_str(s).map_err(|e| convert_deserialize_json_error(e, path, s))
+        serde_json::from_str(s).map_err(|e| convert_deserialize_json_error(e, path, s).into())
     }
 }
 
@@ -71,13 +71,13 @@ impl Yaml {
     }
     fn serialize_string<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<String> {
         serde_yaml::to_string(value)
-            .map_err(|e| SerdeExtError::new_serialize(e.into(), path_to_string(path)))
+            .map_err(|e| SerdeExtError::new_serialize(e.into(), path_to_string(path)).into())
     }
     pub fn deserialize_str<T: serde::de::DeserializeOwned>(
         s: &str,
         path: impl AsRef<Path>,
     ) -> Result<T> {
-        serde_yaml::from_str(s).map_err(|e| convert_deserialize_yaml_error(e, path, s))
+        serde_yaml::from_str(s).map_err(|e| convert_deserialize_yaml_error(e, path, s).into())
     }
 }
 
@@ -109,13 +109,13 @@ impl Toml {
 
     fn serialize_string<T: serde::Serialize>(value: &T, path: impl AsRef<Path>) -> Result<String> {
         toml::to_string(value)
-            .map_err(|e| SerdeExtError::new_serialize(e.into(), path_to_string(path)))
+            .map_err(|e| SerdeExtError::new_serialize(e.into(), path_to_string(path)).into())
     }
     fn deserialize_str<T: serde::de::DeserializeOwned>(
         s: &str,
         path: impl AsRef<Path>,
     ) -> Result<T> {
-        toml::from_str(s).map_err(|e| convert_deserialize_toml_error(e, path, s))
+        toml::from_str(s).map_err(|e| convert_deserialize_toml_error(e, path, s).into())
     }
 }
 
@@ -223,16 +223,15 @@ fn make_hint_string(s: &str, line: usize, column: usize) -> String {
         .join("\n")
 }
 
-type Result<T> = std::result::Result<T, SerdeExtError>;
-
 async fn write_str_for_serialize(s: &str, path: impl AsRef<Path>) -> Result<()> {
     let path = path.as_ref();
     let mut file = fs_ext::open_file_create_if_not_exists(path)
         .await
         .map_err(|e| convert_io_error(e, path))?;
-    file.write_all(s.as_bytes())
+    Ok(file
+        .write_all(s.as_bytes())
         .await
-        .map_err(|e| convert_io_error(e, path))
+        .map_err(|e| convert_io_error(e, path))?)
 }
 
 async fn read_string_for_deserialize(path: impl AsRef<Path>) -> Result<String> {
@@ -251,7 +250,7 @@ fn default_if_not_found<T: Default>(result: Result<T>) -> Result<T> {
     match result {
         Ok(v) => Ok(v),
         Err(err) => {
-            if let SerdeExtError::NotFound { error: _, path: _ } = err {
+            if let Error::Serde(SerdeExtError::NotFound { error: _, path: _ }) = err {
                 Ok(Default::default())
             } else {
                 Err(err)

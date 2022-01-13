@@ -1,3 +1,4 @@
+use super::*;
 use async_std::path::Path;
 use async_std::path::PathBuf;
 use std::cmp::Ordering;
@@ -9,7 +10,7 @@ pub async fn search_isobin_config_path(current_dir: impl AsRef<Path>) -> Result<
     loop {
         let dir_str = current_dir.to_str().unwrap_or("");
         if dir_str.is_empty() {
-            return Err(IsobinConfigPathError::NotFoundIsobinConfig);
+            return Err(IsobinConfigPathError::NotFoundIsobinConfig.into());
         }
         let target_isobin_paths = make_isobin_config_paths(current_dir);
         let mut isobin_path_futures = vec![];
@@ -30,13 +31,14 @@ pub async fn search_isobin_config_path(current_dir: impl AsRef<Path>) -> Result<
                         .iter()
                         .map(|ei| ei.to_str().unwrap_or("").to_string())
                         .collect(),
-                ))
+                )
+                .into())
             }
             Ordering::Less => {
                 if let Some(parent_dir) = current_dir.parent() {
                     current_dir = parent_dir
                 } else {
-                    return Err(IsobinConfigPathError::NotFoundIsobinConfig);
+                    return Err(IsobinConfigPathError::NotFoundIsobinConfig.into());
                 }
             }
         }
@@ -55,8 +57,6 @@ fn make_isobin_config_paths(dir: impl AsRef<Path>) -> Vec<PathBuf> {
     }
     search_isobin_config_paths
 }
-
-type Result<T> = std::result::Result<T, IsobinConfigPathError>;
 
 #[derive(thiserror::Error, Debug, new)]
 pub enum IsobinConfigPathError {

@@ -1,6 +1,4 @@
-mod errors;
 use clap::{Parser, Subcommand};
-pub use errors::*;
 use isobin::*;
 use std::path::PathBuf;
 
