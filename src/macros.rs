@@ -20,3 +20,22 @@ pub mod test_util {
         };
     }
 }
+#[macro_export]
+macro_rules! await_futures {
+    ($futures:expr) => {{
+        let mut targets = vec![];
+        let mut errs = vec![];
+        for future in $futures {
+            let result = future.await;
+            match result {
+                Ok(target) => targets.push(target),
+                Err(err) => errs.push(err),
+            }
+        }
+        if errs.is_empty() {
+            Ok(targets)
+        } else {
+            Err(errs)
+        }
+    }};
+}

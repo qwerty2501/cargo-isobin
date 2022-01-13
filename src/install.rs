@@ -1,4 +1,6 @@
-use crate::paths::project::Project;
+use crate::providers::cargo::CargoConfig;
+use crate::providers::cargo::CargoInstallTarget;
+use crate::{paths::project::Project, providers::cargo::CargoInstaller};
 
 use super::*;
 use async_std::sync::Arc;
@@ -24,15 +26,40 @@ impl InstallService {
         service_option: &ServiceOption,
         install_service_option: &InstallServiceOption,
     ) -> Result<()> {
-        let isobin_config_path = service_option.isobin_config();
-        todo!()
+        let isobin_config = service_option.isobin_config();
+        let cargo_installer = CargoInstaller::default();
+        let cargo_runner = InstallRunnerProvider::make_cargo_runner(
+            CargoInstaller::default(),
+            isobin_config.cargo(),
+        );
+        self.run_each_installs(vec![cargo_runner]).await
+    }
+
+    async fn run_each_installs(&self, runners: Vec<Arc<dyn InstallRunner>>) -> Result<()> {
+        await_futures!(runners.iter().map(|r| r.run_installs()))
+            .map_err(InstallServiceError::MultiInstall)?;
+        Ok(())
     }
 }
 
 pub struct InstallRunnerProvider;
 
 impl InstallRunnerProvider {
-    pub fn make_runner<I: providers::Installer>(
+    pub fn make_cargo_runner(
+        cargo_installer: CargoInstaller,
+        cargo_config: &CargoConfig,
+    ) -> Arc<dyn InstallRunner> {
+        let install_targets = cargo_config
+            .installs()
+            .iter()
+            .map(|(name, install_dependency)| {
+                CargoInstallTarget::new(name.into(), install_dependency.clone())
+            })
+            .collect::<Vec<_>>();
+        Self::make_runner(cargo_installer, install_targets)
+    }
+
+    fn make_runner<I: providers::Installer>(
         installer: I,
         targets: Vec<I::InstallTarget>,
     ) -> Arc<dyn InstallRunner> {
@@ -41,7 +68,7 @@ impl InstallRunnerProvider {
 }
 
 #[async_trait]
-pub trait InstallRunner {
+pub trait InstallRunner: 'static + Sync + Send {
     fn provider_type(&self) -> providers::ProviderKind;
     async fn run_installs(&self) -> Result<()>;
 }

@@ -8,7 +8,7 @@ use async_std::path::Path;
 use providers::cargo::CargoConfig;
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Getters)]
 pub struct IsobinConfig {
     #[serde(default)]
     cargo: CargoConfig,

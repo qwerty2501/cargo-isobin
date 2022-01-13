@@ -1,6 +1,7 @@
 use super::*;
+
+#[derive(Default)]
 pub struct CargoInstaller {}
-pub struct CargoInstallTarget {}
 
 #[async_trait]
 impl providers::Installer for CargoInstaller {
@@ -17,6 +18,12 @@ impl providers::Installer for CargoInstaller {
     async fn install(&self, target: &Self::InstallTarget) -> Result<()> {
         todo!()
     }
+}
+
+#[derive(new, Getters)]
+pub struct CargoInstallTarget {
+    name: String,
+    install_dependency: CargoInstallDependency,
 }
 
 #[async_trait]
