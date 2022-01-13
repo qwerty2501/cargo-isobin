@@ -52,14 +52,44 @@ struct InstallRunnerImpl<I: providers::Installer> {
     targets: Vec<I::InstallTarget>,
 }
 
+impl<I: providers::Installer> InstallRunnerImpl<I> {
+    async fn run_sequential_installs(&self) -> Result<()> {
+        for target in self.targets.iter() {
+            self.installer.install(target).await?;
+        }
+        Ok(())
+    }
+    async fn run_parallel_installs(&self) -> Result<()> {
+        let mut target_futures = Vec::with_capacity(self.targets.len());
+        for target in self.targets.iter() {
+            target_futures.push(self.installer.install(target));
+        }
+        let mut target_errors = vec![];
+        for target_future in target_futures.into_iter() {
+            let result = target_future.await;
+            if let Some(err) = result.err() {
+                target_errors.push(err);
+            }
+        }
+        if !target_errors.is_empty() {
+            Err(InstallServiceError::MultiInstall(target_errors))
+        } else {
+            Ok(())
+        }
+    }
+}
+
 #[async_trait]
 impl<I: providers::Installer> InstallRunner for InstallRunnerImpl<I> {
     fn provider_type(&self) -> providers::ProviderKind {
-        self.installer.provider_type()
+        self.installer.provider_kind()
     }
 
     async fn run_installs(&self) -> Result<()> {
-        Ok(self.installer.installs(&self.targets).await?)
+        match self.installer.multi_install_mode() {
+            providers::MultiInstallMode::Parallel => self.run_parallel_installs().await,
+            providers::MultiInstallMode::Sequential => self.run_sequential_installs().await,
+        }
     }
 }
 
@@ -93,4 +123,7 @@ type Result<T> = std::result::Result<T, InstallServiceError>;
 pub enum InstallServiceError {
     #[error("{0}")]
     Install(#[from] providers::InstallError),
+
+    #[error("occurred multi error")]
+    MultiInstall(Vec<providers::InstallError>),
 }
