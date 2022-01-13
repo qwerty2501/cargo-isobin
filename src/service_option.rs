@@ -1,7 +1,6 @@
 use super::*;
 use crate::paths::isobin_config::search_isobin_config_path;
-use crate::paths::isobin_config::IsobinConfigPathError;
-use crate::{IsobinConfig, IsobinConfigError};
+use crate::IsobinConfig;
 use async_std::path::{Path, PathBuf};
 
 #[derive(Getters)]
@@ -40,12 +39,4 @@ impl ServiceOptionBuilder {
             isobin_config,
         })
     }
-}
-
-#[derive(thiserror::Error, Debug, new)]
-pub enum ServiceOptionBuildError {
-    #[error("{0}")]
-    IsobinPath(#[from] IsobinConfigPathError),
-    #[error("{0}")]
-    IsobinConfig(#[from] IsobinConfigError),
 }
