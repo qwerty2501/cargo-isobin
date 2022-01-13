@@ -6,6 +6,7 @@ use async_std::path::{Path, PathBuf};
 
 #[derive(Getters)]
 pub struct ServiceOption {
+    isobin_config_path: PathBuf,
     isobin_config: IsobinConfig,
 }
 
@@ -33,8 +34,11 @@ impl ServiceOptionBuilder {
             let current_dir = std::env::current_dir().unwrap();
             search_isobin_config_path(current_dir).await?
         };
-        let isobin_config = IsobinConfig::parse_from_file(isobin_config_path).await?;
-        Ok(ServiceOption { isobin_config })
+        let isobin_config = IsobinConfig::parse_from_file(&isobin_config_path).await?;
+        Ok(ServiceOption {
+            isobin_config_path,
+            isobin_config,
+        })
     }
 }
 
