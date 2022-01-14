@@ -4,7 +4,7 @@ use super::*;
 pub struct CargoInstaller {}
 
 #[async_trait]
-impl providers::Installer for CargoInstaller {
+impl providers::CoreInstaller for CargoInstaller {
     type InstallTarget = CargoInstallTarget;
 
     fn provider_kind(&self) -> providers::ProviderKind {

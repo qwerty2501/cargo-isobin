@@ -59,7 +59,7 @@ impl InstallRunnerProvider {
         Self::make_runner(cargo_installer, install_targets)
     }
 
-    fn make_runner<I: providers::Installer>(
+    fn make_runner<I: providers::CoreInstaller>(
         installer: I,
         targets: Vec<I::InstallTarget>,
     ) -> Arc<dyn InstallRunner> {
@@ -74,12 +74,12 @@ pub trait InstallRunner: 'static + Sync + Send {
 }
 
 #[derive(new)]
-struct InstallRunnerImpl<I: providers::Installer> {
+struct InstallRunnerImpl<I: providers::CoreInstaller> {
     installer: I,
     targets: Vec<I::InstallTarget>,
 }
 
-impl<I: providers::Installer> InstallRunnerImpl<I> {
+impl<I: providers::CoreInstaller> InstallRunnerImpl<I> {
     async fn run_sequential_installs(&self) -> Result<()> {
         for target in self.targets.iter() {
             self.installer.install(target).await?;
@@ -107,7 +107,7 @@ impl<I: providers::Installer> InstallRunnerImpl<I> {
 }
 
 #[async_trait]
-impl<I: providers::Installer> InstallRunner for InstallRunnerImpl<I> {
+impl<I: providers::CoreInstaller> InstallRunner for InstallRunnerImpl<I> {
     fn provider_type(&self) -> providers::ProviderKind {
         self.installer.provider_kind()
     }

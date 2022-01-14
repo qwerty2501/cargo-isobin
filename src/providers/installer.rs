@@ -1,6 +1,6 @@
 use super::*;
 #[async_trait]
-pub trait Installer: 'static + Send + Sync {
+pub trait CoreInstaller: 'static + Send + Sync {
     type InstallTarget: InstallTarget;
 
     fn provider_kind(&self) -> providers::ProviderKind;
@@ -13,5 +13,11 @@ pub enum MultiInstallMode {
     Sequential,
 }
 
-#[async_trait]
 pub trait InstallTarget: 'static + Send + Sync {}
+
+#[async_trait]
+pub trait BinPathInstaller: 'static + Send + Sync {
+    type InstallTarget: InstallTarget;
+    async fn bin_names(&self) -> Vec<String>;
+    async fn bin_installs(&self, targets: &[Self::InstallTarget]) -> Result<()>;
+}
