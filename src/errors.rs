@@ -13,4 +13,6 @@ pub enum Error {
     Serde(#[from] SerdeExtError),
     #[error("{0}")]
     InstallService(#[from] InstallServiceError),
+    #[error("{0}")]
+    Fatal(#[source] anyhow::Error),
 }

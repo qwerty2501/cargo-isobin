@@ -1,4 +1,15 @@
 use super::*;
+use async_std::path::PathBuf;
+
+#[async_trait]
+pub trait InstallerFactory: 'static + Send + Sync {
+    type InstallTarget: InstallTarget;
+    type CoreInstaller: CoreInstaller<InstallTarget = Self::InstallTarget>;
+    type BinPathInstaller: BinPathInstaller<InstallTarget = Self::InstallTarget>;
+    async fn create_core_installer(&self) -> Result<Self::CoreInstaller>;
+    async fn create_bin_path_installer(&self) -> Result<Self::BinPathInstaller>;
+}
+
 #[async_trait]
 pub trait CoreInstaller: 'static + Send + Sync {
     type InstallTarget: InstallTarget;
@@ -18,6 +29,6 @@ pub trait InstallTarget: 'static + Send + Sync {}
 #[async_trait]
 pub trait BinPathInstaller: 'static + Send + Sync {
     type InstallTarget: InstallTarget;
-    async fn bin_names(&self) -> Vec<String>;
-    async fn bin_installs(&self, targets: &[Self::InstallTarget]) -> Result<()>;
+    async fn bin_paths(&self) -> Result<Vec<PathBuf>>;
+    async fn install_bin_path(&self, targets: &[Self::InstallTarget]) -> Result<()>;
 }

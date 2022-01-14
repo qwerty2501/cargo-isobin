@@ -13,15 +13,19 @@ pub struct Workspace {
     id: String,
     base_dir: PathBuf,
     cache_dir: PathBuf,
+    bin_dir: PathBuf,
     home_dir: PathBuf,
 }
 
 impl Workspace {
     #[allow(dead_code)]
     fn new(id: String, base_unique_workspace_dir: PathBuf, unique_cache_dir: PathBuf) -> Self {
+        let home_dir = base_unique_workspace_dir.join("home");
+        let bin_dir = home_dir.join("bin");
         Self {
             id,
-            home_dir: base_unique_workspace_dir.join("home"),
+            bin_dir,
+            home_dir,
             cache_dir: unique_cache_dir,
             base_dir: base_unique_workspace_dir,
         }
@@ -106,6 +110,7 @@ mod tests {
         Workspace{
             cache_dir:"/home/user_name/.cache/332334".into(),
             base_dir:"/home/user_name/.local/share/332334".into(),
+            bin_dir:"/home/user_name/.local/share/332334/home/bin".into(),
             home_dir:"/home/user_name/.local/share/332334/home".into(),
             id:"332334".into(),
         }

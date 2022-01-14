@@ -1,6 +1,10 @@
+use crate::paths::isobin_config::IsobinConfigPathError;
+use crate::paths::workspace::WorkspaceProvider;
 use crate::providers::cargo::CargoConfig;
 use crate::providers::cargo::CargoInstallTarget;
-use crate::{paths::project::Project, providers::cargo::CargoCoreInstaller};
+use crate::{paths::project::Project, providers::cargo::CargoInstallerFactory};
+use async_std::path::PathBuf;
+use std::collections::HashSet;
 
 use super::*;
 use async_std::sync::Arc;
@@ -13,10 +17,21 @@ pub enum InstallMode {
     },
 }
 
-#[derive(new, Default)]
+#[derive(new)]
 pub struct InstallService {
     #[allow(dead_code)]
     project: Project,
+    workspace_provider: WorkspaceProvider,
+}
+
+impl Default for InstallService {
+    fn default() -> Self {
+        let project = Project::default();
+        Self {
+            workspace_provider: WorkspaceProvider::new(project.clone()),
+            project,
+        }
+    }
 }
 
 impl InstallService {
@@ -27,28 +42,55 @@ impl InstallService {
         install_service_option: &InstallServiceOption,
     ) -> Result<()> {
         let isobin_config = service_option.isobin_config();
-        let cargo_installer = CargoCoreInstaller::default();
+        let isobin_config_dir = service_option
+            .isobin_config_path()
+            .parent()
+            .ok_or(IsobinConfigPathError::NotFoundIsobinConfig)?;
+        let workspace = self
+            .workspace_provider
+            .base_unique_workspace_dir_from_isobin_config_dir(&isobin_config_dir)
+            .await?;
+        let cargo_installer_factory = CargoInstallerFactory::new(workspace.clone());
         let cargo_runner = InstallRunnerProvider::make_cargo_runner(
-            CargoCoreInstaller::default(),
+            &cargo_installer_factory,
             isobin_config.cargo(),
-        );
+        )
+        .await?;
         self.run_each_installs(vec![cargo_runner]).await
     }
 
     async fn run_each_installs(&self, runners: Vec<Arc<dyn InstallRunner>>) -> Result<()> {
         await_futures!(runners.iter().map(|r| r.run_installs()))
             .map_err(InstallServiceError::MultiInstall)?;
-        Ok(())
+        let mut keys = HashSet::new();
+        let mut duplicates = vec![];
+        for file_name in await_futures!(runners.iter().map(|r| r.bin_paths()))
+            .map_err(InstallServiceError::MultiInstall)?
+            .into_iter()
+            .flatten()
+            .map(|p| p.file_name().unwrap().to_str().unwrap().to_string())
+        {
+            if keys.insert(file_name.clone()) {
+                duplicates.push(file_name);
+            }
+        }
+        if !duplicates.is_empty() {
+            Err(InstallServiceError::new_duplicate_bin(duplicates).into())
+        } else {
+            await_futures!(runners.iter().map(|r| r.install_bin_path()))
+                .map_err(InstallServiceError::MultiInstall)?;
+            Ok(())
+        }
     }
 }
 
 pub struct InstallRunnerProvider;
 
 impl InstallRunnerProvider {
-    pub fn make_cargo_runner(
-        cargo_installer: CargoCoreInstaller,
+    pub async fn make_cargo_runner(
+        cargo_installer: &CargoInstallerFactory,
         cargo_config: &CargoConfig,
-    ) -> Arc<dyn InstallRunner> {
+    ) -> Result<Arc<dyn InstallRunner>> {
         let install_targets = cargo_config
             .installs()
             .iter()
@@ -56,14 +98,20 @@ impl InstallRunnerProvider {
                 CargoInstallTarget::new(name.into(), install_dependency.clone())
             })
             .collect::<Vec<_>>();
-        Self::make_runner(cargo_installer, install_targets)
+        Self::make_runner(cargo_installer, install_targets).await
     }
 
-    fn make_runner<I: providers::CoreInstaller>(
-        installer: I,
-        targets: Vec<I::InstallTarget>,
-    ) -> Arc<dyn InstallRunner> {
-        Arc::new(InstallRunnerImpl::new(installer, targets))
+    async fn make_runner<IF: providers::InstallerFactory>(
+        installer_factory: &IF,
+        targets: Vec<IF::InstallTarget>,
+    ) -> Result<Arc<dyn InstallRunner>> {
+        let core_installer = installer_factory.create_core_installer().await?;
+        let bin_path_installer = installer_factory.create_bin_path_installer().await?;
+        Ok(Arc::new(InstallRunnerImpl::new(
+            core_installer,
+            bin_path_installer,
+            targets,
+        )))
     }
 }
 
@@ -71,25 +119,37 @@ impl InstallRunnerProvider {
 pub trait InstallRunner: 'static + Sync + Send {
     fn provider_type(&self) -> providers::ProviderKind;
     async fn run_installs(&self) -> Result<()>;
+    async fn bin_paths(&self) -> Result<Vec<PathBuf>>;
+    async fn install_bin_path(&self) -> Result<()>;
 }
 
 #[derive(new)]
-struct InstallRunnerImpl<I: providers::CoreInstaller> {
-    installer: I,
-    targets: Vec<I::InstallTarget>,
+struct InstallRunnerImpl<
+    IT: providers::InstallTarget,
+    CI: providers::CoreInstaller<InstallTarget = IT>,
+    BI: providers::BinPathInstaller<InstallTarget = IT>,
+> {
+    core_installer: CI,
+    bin_path_installer: BI,
+    targets: Vec<IT>,
 }
 
-impl<I: providers::CoreInstaller> InstallRunnerImpl<I> {
+impl<
+        IT: providers::InstallTarget,
+        CI: providers::CoreInstaller<InstallTarget = IT>,
+        BI: providers::BinPathInstaller<InstallTarget = IT>,
+    > InstallRunnerImpl<IT, CI, BI>
+{
     async fn run_sequential_installs(&self) -> Result<()> {
         for target in self.targets.iter() {
-            self.installer.install(target).await?;
+            self.core_installer.install(target).await?;
         }
         Ok(())
     }
     async fn run_parallel_installs(&self) -> Result<()> {
         let mut target_futures = Vec::with_capacity(self.targets.len());
         for target in self.targets.iter() {
-            target_futures.push(self.installer.install(target));
+            target_futures.push(self.core_installer.install(target));
         }
         let mut target_errors = vec![];
         for target_future in target_futures.into_iter() {
@@ -107,16 +167,29 @@ impl<I: providers::CoreInstaller> InstallRunnerImpl<I> {
 }
 
 #[async_trait]
-impl<I: providers::CoreInstaller> InstallRunner for InstallRunnerImpl<I> {
+impl<
+        IT: providers::InstallTarget,
+        CI: providers::CoreInstaller<InstallTarget = IT>,
+        BI: providers::BinPathInstaller<InstallTarget = IT>,
+    > InstallRunner for InstallRunnerImpl<IT, CI, BI>
+{
     fn provider_type(&self) -> providers::ProviderKind {
-        self.installer.provider_kind()
+        self.core_installer.provider_kind()
     }
 
     async fn run_installs(&self) -> Result<()> {
-        match self.installer.multi_install_mode() {
+        match self.core_installer.multi_install_mode() {
             providers::MultiInstallMode::Parallel => self.run_parallel_installs().await,
             providers::MultiInstallMode::Sequential => self.run_sequential_installs().await,
         }
+    }
+    async fn bin_paths(&self) -> Result<Vec<PathBuf>> {
+        self.bin_path_installer.bin_paths().await
+    }
+    async fn install_bin_path(&self) -> Result<()> {
+        self.bin_path_installer
+            .install_bin_path(&self.targets)
+            .await
     }
 }
 
@@ -148,4 +221,7 @@ impl InstallServiceOptionBuilder {
 pub enum InstallServiceError {
     #[error("occurred multi error")]
     MultiInstall(Vec<Error>),
+
+    #[error("duplicate bins:{0:#?}")]
+    DuplicateBin(Vec<String>),
 }
