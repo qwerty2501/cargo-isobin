@@ -1,6 +1,6 @@
 use crate::providers::cargo::CargoConfig;
 use crate::providers::cargo::CargoInstallTarget;
-use crate::{paths::project::Project, providers::cargo::CargoInstaller};
+use crate::{paths::project::Project, providers::cargo::CargoCoreInstaller};
 
 use super::*;
 use async_std::sync::Arc;
@@ -27,9 +27,9 @@ impl InstallService {
         install_service_option: &InstallServiceOption,
     ) -> Result<()> {
         let isobin_config = service_option.isobin_config();
-        let cargo_installer = CargoInstaller::default();
+        let cargo_installer = CargoCoreInstaller::default();
         let cargo_runner = InstallRunnerProvider::make_cargo_runner(
-            CargoInstaller::default(),
+            CargoCoreInstaller::default(),
             isobin_config.cargo(),
         );
         self.run_each_installs(vec![cargo_runner]).await
@@ -46,7 +46,7 @@ pub struct InstallRunnerProvider;
 
 impl InstallRunnerProvider {
     pub fn make_cargo_runner(
-        cargo_installer: CargoInstaller,
+        cargo_installer: CargoCoreInstaller,
         cargo_config: &CargoConfig,
     ) -> Arc<dyn InstallRunner> {
         let install_targets = cargo_config

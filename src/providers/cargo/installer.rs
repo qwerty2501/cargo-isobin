@@ -1,10 +1,10 @@
 use super::*;
 
 #[derive(Default)]
-pub struct CargoInstaller {}
+pub struct CargoCoreInstaller {}
 
 #[async_trait]
-impl providers::CoreInstaller for CargoInstaller {
+impl providers::CoreInstaller for CargoCoreInstaller {
     type InstallTarget = CargoInstallTarget;
 
     fn provider_kind(&self) -> providers::ProviderKind {
