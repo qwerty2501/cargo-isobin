@@ -82,7 +82,7 @@ mod tests {
     use anyhow::anyhow;
     use providers::cargo::{CargoInstallDependency, CargoInstallDependencyDetail};
 
-    use utils::serde_ext::SerdeExtError;
+    use utils::serde_ext::{ErrorHint, SerdeExtError};
 
     #[rstest]
     #[case(
@@ -129,8 +129,8 @@ mod tests {
             SerdeExtError::new_deserialize_with_hint(
                 anyhow!("expected an equals, found a colon at line 1 column 6"),
                 with_current_source_dir("testdata/isobin_configs/default_load.yaml"),
-                    "cargo:\n_____^\n".into()),
-            ),
+                ErrorHint::new(1,6,include_str!("testdata/isobin_configs/default_load.yaml").into()),
+            )),
         )]
     #[case(
         ConfigFileExtensions::Yaml,
@@ -139,8 +139,18 @@ mod tests {
             SerdeExtError::new_deserialize_with_hint(
                 anyhow!("did not find expected <document start> at line 2 column 1\n\nCaused by:\n    did not find expected <document start> at line 2 column 1"),
                 with_current_source_dir("testdata/isobin_configs/default_load.toml"),
-                    "[cargo.installs]\ncargo-make = \"2.0\"\ncomrak = \"1.0\"\n_^\n".into()),
-            ),
+                ErrorHint::new(2,1,include_str!("testdata/isobin_configs/default_load.toml").into()),
+            )),
+        )]
+    #[case(
+        ConfigFileExtensions::Json,
+        "testdata/isobin_configs/default_load.toml",
+        Error::new_serde(
+            SerdeExtError::new_deserialize_with_hint(
+                anyhow!("expected value at line 1 column 2"),
+                with_current_source_dir("testdata/isobin_configs/default_load.toml"),
+                ErrorHint::new(1,2,include_str!("testdata/isobin_configs/default_load.toml").into()),
+            )),
         )]
     async fn isobin_config_from_str_error_works(
         #[case] ft: ConfigFileExtensions,

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::*;
 use async_std::fs::File;
 use async_std::io::{self, ReadExt, WriteExt};
@@ -138,7 +140,7 @@ pub enum SerdeExtError {
         #[source]
         error: anyhow::Error,
         path: String,
-        hint: String,
+        hint: ErrorHint,
     },
     #[error("An deserialize error occurred\npath:{path}\nerror:{error}")]
     Deserialize {
@@ -152,6 +154,35 @@ pub enum SerdeExtError {
         error: anyhow::Error,
         path: String,
     },
+}
+
+#[derive(PartialEq, new, Getters, Debug)]
+pub struct ErrorHint {
+    line: usize,
+    column: usize,
+    source: String,
+}
+
+impl ErrorHint {
+    pub fn source_summary(&self) -> String {
+        let lines = self.source.lines().collect::<Vec<_>>();
+        let diff = std::cmp::min(self.line, 2);
+        let summary_target = &lines[self.line - diff..=self.line];
+        summary_target.join("\n")
+    }
+    pub fn hint(&self) -> String {
+        let mut hint = vec!['_'; self.column];
+        hint.push('^');
+        String::from_iter(hint.iter())
+    }
+}
+
+impl Display for ErrorHint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        let source_summary = self.source_summary();
+        let hint = self.hint();
+        f.write_fmt(format_args!("{source_summary}\n{hint}"))
+    }
 }
 
 fn convert_io_error(e: io::Error, path: impl AsRef<Path>) -> SerdeExtError {
@@ -168,7 +199,7 @@ fn convert_deserialize_json_error(
     s: &str,
 ) -> SerdeExtError {
     if e.is_data() || e.is_syntax() {
-        let hint = make_hint_string(s, e.line(), e.column());
+        let hint = ErrorHint::new(e.line(), e.column(), s.into());
         SerdeExtError::new_deserialize_with_hint(e.into(), path_to_string(path), hint)
     } else {
         SerdeExtError::new_deserialize(e.into(), path_to_string(path))
@@ -181,7 +212,7 @@ fn convert_deserialize_yaml_error(
     s: &str,
 ) -> SerdeExtError {
     if let Some(location) = e.location() {
-        let hint = make_hint_string(s, location.line(), location.column());
+        let hint = ErrorHint::new(location.line(), location.column(), s.into());
         SerdeExtError::new_deserialize_with_hint(e.into(), path_to_string(path), hint)
     } else {
         SerdeExtError::new_deserialize(e.into(), path_to_string(path))
@@ -194,33 +225,11 @@ fn convert_deserialize_toml_error(
     s: &str,
 ) -> SerdeExtError {
     if let Some((line, col)) = e.line_col() {
-        let hint = make_hint_string(s, line, col);
+        let hint = ErrorHint::new(line + 1, col + 1, s.into());
         SerdeExtError::new_deserialize_with_hint(e.into(), path_to_string(path), hint)
     } else {
         SerdeExtError::new_deserialize(e.into(), path_to_string(path))
     }
-}
-
-fn make_hint_string(s: &str, line: usize, column: usize) -> String {
-    let lines = s
-        .lines()
-        .map(|line| line.chars().collect::<Vec<_>>())
-        .collect::<Vec<_>>();
-    let diff = std::cmp::min(line, 2);
-    let hint_target = &lines[line - diff..=line];
-    let mut new_lines = Vec::from_iter(hint_target);
-    let mut hint = vec!['_'; column];
-    hint.push('^');
-    hint.push('\n');
-    if !new_lines.is_empty() {
-        new_lines.push(&hint);
-    }
-
-    new_lines
-        .iter()
-        .map(|line| String::from_iter(line.iter()))
-        .collect::<Vec<_>>()
-        .join("\n")
 }
 
 async fn write_str_for_serialize(s: &str, path: impl AsRef<Path>) -> Result<()> {
@@ -280,7 +289,7 @@ mod tests {
         #[case] column: usize,
         #[case] expected: &str,
     ) {
-        let actual = make_hint_string(s, line, column);
-        pretty_assertions::assert_eq!(expected, actual);
+        let actual = ErrorHint::new(line, column, s.into());
+        pretty_assertions::assert_eq!(expected, format!("{actual}"));
     }
 }
