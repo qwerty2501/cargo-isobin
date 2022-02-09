@@ -2,6 +2,7 @@ use crate::paths::isobin_config::IsobinConfigPathError;
 use crate::paths::workspace::WorkspaceProvider;
 use crate::providers::cargo::CargoConfig;
 use crate::providers::cargo::CargoInstallTarget;
+use crate::utils::fs_ext;
 use crate::{paths::project::Project, providers::cargo::CargoInstallerFactory};
 use async_std::path::PathBuf;
 use std::collections::HashSet;
@@ -56,6 +57,9 @@ impl InstallService {
             isobin_config.cargo(),
         )
         .await?;
+        fs_ext::clean_dir(workspace.bin_dir())
+            .await
+            .map_err(|e| Error::new_fatal(e.into()))?;
         self.run_each_installs(vec![cargo_runner]).await
     }
 

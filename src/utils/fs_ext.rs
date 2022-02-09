@@ -64,3 +64,11 @@ pub async fn make_hard_links_in_dir(
         Ok(())
     }
 }
+
+pub async fn clean_dir(dir: impl AsRef<Path>) -> Result<(), async_std::io::Error> {
+    let dir = dir.as_ref();
+    create_dir_if_not_exists(dir).await?;
+    fs::remove_dir_all(dir).await?;
+    create_dir_if_not_exists(dir).await?;
+    Ok(())
+}
