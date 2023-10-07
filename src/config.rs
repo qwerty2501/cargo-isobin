@@ -3,7 +3,7 @@ use crate::utils::{
     io_ext,
     serde_ext::{Json, Toml, Yaml},
 };
-use async_std::path::Path;
+use std::path::Path;
 
 use providers::cargo::CargoConfig;
 use serde_derive::{Deserialize, Serialize};
@@ -89,6 +89,7 @@ mod tests {
         "testdata/isobin_configs/default_load.toml",
         tool_config(cargo_install_dependencies())
     )]
+    #[tokio::test]
     async fn isobin_config_from_path_works(#[case] path: &str, #[case] expected: IsobinConfig) {
         let dir = current_source_dir!();
         let actual = IsobinConfig::parse_from_file(dir.join(path)).await.unwrap();
@@ -106,6 +107,7 @@ mod tests {
         "testdata/isobin_configs/default_load.yaml",
         tool_config(cargo_install_dependencies())
     )]
+    #[tokio::test]
     async fn isobin_config_from_str_works(
         #[case] ft: ConfigFileExtensions,
         #[case] path: impl AsRef<Path>,
@@ -152,6 +154,7 @@ mod tests {
                 ErrorHint::new(1,2,include_str!("testdata/isobin_configs/default_load.toml").into()),
             )),
         )]
+    #[tokio::test]
     async fn isobin_config_from_str_error_works(
         #[case] ft: ConfigFileExtensions,
         #[case] path: impl AsRef<Path>,

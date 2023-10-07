@@ -1,5 +1,5 @@
 use crate::paths::workspace::Workspace;
-use async_std::path::PathBuf;
+use std::path::PathBuf;
 
 #[derive(Getters, Clone)]
 pub struct CargoWorkspace {

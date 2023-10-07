@@ -1,7 +1,6 @@
 use super::*;
-use async_std::path::Path;
-use async_std::path::PathBuf;
 use std::cmp::Ordering;
+use std::path::{Path, PathBuf};
 
 pub async fn search_isobin_config_path(current_dir: impl AsRef<Path>) -> Result<PathBuf> {
     let mut current_dir = current_dir.as_ref();
@@ -19,7 +18,7 @@ pub async fn search_isobin_config_path(current_dir: impl AsRef<Path>) -> Result<
         }
         let mut exists_isobin_paths = vec![];
         for ipf in isobin_path_futures.into_iter() {
-            if ipf.1.await {
+            if ipf.1 {
                 exists_isobin_paths.push(ipf.0);
             }
         }

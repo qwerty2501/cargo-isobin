@@ -4,11 +4,11 @@ use crate::providers::cargo::CargoConfig;
 use crate::providers::cargo::CargoInstallTarget;
 use crate::utils::fs_ext;
 use crate::{paths::project::Project, providers::cargo::CargoInstallerFactory};
-use async_std::path::PathBuf;
 use std::collections::HashSet;
+use std::path::PathBuf;
 
 use super::*;
-use async_std::sync::Arc;
+use std::sync::Arc;
 
 #[derive(PartialEq)]
 pub enum InstallMode {

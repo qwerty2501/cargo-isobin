@@ -1,4 +1,4 @@
-use async_std::path::PathBuf;
+use std::path::PathBuf;
 
 use crate::{
     paths::workspace::Workspace,

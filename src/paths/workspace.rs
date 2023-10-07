@@ -3,10 +3,10 @@ use crate::utils::serde_ext::Json;
 use super::*;
 use project::Project;
 
-use async_std::path::{Path, PathBuf};
 use nanoid::nanoid;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 #[derive(Getters, Clone, PartialEq, Debug)]
 pub struct Workspace {
@@ -85,7 +85,7 @@ impl WorkspacePathMap {
     async fn parse_from_config_dir(config_dir: impl AsRef<Path>) -> Result<WorkspacePathMap> {
         let workspace_path_map_file_path =
             config_dir.as_ref().join(Self::WORKSPACE_PATH_MAP_FILE_NAME);
-        Ok(Json::parse_from_file(workspace_path_map_file_path).await?)
+        Json::parse_from_file(workspace_path_map_file_path).await
     }
 
     async fn save_to_config_dir(
@@ -94,7 +94,7 @@ impl WorkspacePathMap {
     ) -> Result<()> {
         let workspace_path_map_file_path =
             config_dir.as_ref().join(Self::WORKSPACE_PATH_MAP_FILE_NAME);
-        Ok(Json::save_to_file(workspace_path_map, workspace_path_map_file_path).await?)
+        Json::save_to_file(workspace_path_map, workspace_path_map_file_path).await
     }
 }
 

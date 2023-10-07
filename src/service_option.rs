@@ -1,7 +1,7 @@
 use super::*;
 use crate::paths::isobin_config::search_isobin_config_path;
 use crate::IsobinConfig;
-use async_std::path::{Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 #[derive(Getters)]
 pub struct ServiceOption {

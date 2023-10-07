@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 use isobin::*;
 use std::path::PathBuf;
 
-#[async_std::main]
+#[tokio::main]
 async fn main() -> Result<()> {
     let app = Application::default();
 

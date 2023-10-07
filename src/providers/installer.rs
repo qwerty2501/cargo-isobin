@@ -1,5 +1,5 @@
 use super::*;
-use async_std::path::PathBuf;
+use std::path::PathBuf;
 
 #[async_trait]
 pub trait InstallerFactory: 'static + Send + Sync {

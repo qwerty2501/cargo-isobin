@@ -1,10 +1,10 @@
 use std::fmt::Display;
 
 use super::*;
-use async_std::fs::File;
-use async_std::io::{self, ReadExt, WriteExt};
-use async_std::path::Path;
 use io_ext::path_to_string;
+use std::path::Path;
+use tokio::fs::File;
+use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use utils::fs_ext;
 
 #[allow(dead_code)]

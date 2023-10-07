@@ -1,4 +1,4 @@
-use async_std::path::PathBuf;
+use std::path::PathBuf;
 
 #[cfg(debug_assertions)]
 const PACKAGE_NAME: &str = concat!(env!("CARGO_PKG_NAME"), "_dev");
