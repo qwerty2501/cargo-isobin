@@ -45,14 +45,12 @@ pub async fn search_isobin_config_path(current_dir: impl AsRef<Path>) -> Result<
 }
 
 fn make_isobin_config_paths(dir: impl AsRef<Path>) -> Vec<PathBuf> {
-    let allow_isobin_config_base_names = ["isobin", ".isobin"];
+    let base_name = "isobin";
     let allow_isobin_config_extensions = ["toml", "yaml", "yml", "json"];
     let mut search_isobin_config_paths = vec![];
-    for base_name in allow_isobin_config_base_names.into_iter() {
-        for extension in allow_isobin_config_extensions.into_iter() {
-            let isobin_config_path = dir.as_ref().join(format!("{}.{}", base_name, extension));
-            search_isobin_config_paths.push(isobin_config_path);
-        }
+    for extension in allow_isobin_config_extensions.into_iter() {
+        let isobin_config_path = dir.as_ref().join(format!("{}.{}", base_name, extension));
+        search_isobin_config_paths.push(isobin_config_path);
     }
     search_isobin_config_paths
 }
