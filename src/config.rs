@@ -208,7 +208,7 @@ mod tests {
 
     #[fixture]
     fn empty_cargos() -> Vec<(String, CargoInstallDependency)> {
-        return vec![];
+        vec![]
     }
 
     #[rstest]
