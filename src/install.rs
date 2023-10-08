@@ -1,4 +1,8 @@
+use nanoid::nanoid;
+use tokio::fs;
+
 use crate::paths::isobin_config::IsobinConfigPathError;
+use crate::paths::workspace::Workspace;
 use crate::paths::workspace::WorkspaceProvider;
 use crate::providers::cargo::CargoConfig;
 use crate::providers::cargo::CargoInstallTarget;
@@ -51,19 +55,30 @@ impl InstallService {
             .workspace_provider
             .base_unique_workspace_dir_from_isobin_config_dir(&isobin_config_dir)
             .await?;
-        let cargo_installer_factory = CargoInstallerFactory::new(workspace.clone());
+        let tmp_workspace = Workspace::new(
+            workspace.id().clone(),
+            workspace.cache_dir().join(nanoid!()),
+            workspace.cache_dir().clone(),
+        );
+        fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir())
+            .await
+            .map_err(|err| Error::new_fatal(err.into()))?;
+        let cargo_installer_factory = CargoInstallerFactory::new(tmp_workspace.clone());
         let cargo_runner = InstallRunnerProvider::make_cargo_runner(
             &cargo_installer_factory,
             isobin_config.cargo(),
         )
         .await?;
-        fs_ext::clean_dir(workspace.bin_dir())
+        self.run_each_installs(&workspace, &tmp_workspace, vec![cargo_runner])
             .await
-            .map_err(|e| Error::new_fatal(e.into()))?;
-        self.run_each_installs(vec![cargo_runner]).await
     }
 
-    async fn run_each_installs(&self, runners: Vec<Arc<dyn InstallRunner>>) -> Result<()> {
+    async fn run_each_installs(
+        &self,
+        workspace: &Workspace,
+        tmp_workspace: &Workspace,
+        runners: Vec<Arc<dyn InstallRunner>>,
+    ) -> Result<()> {
         await_futures!(runners.iter().map(|r| r.run_installs()))
             .map_err(InstallServiceError::MultiInstall)?;
         let mut keys = HashSet::new();
@@ -83,7 +98,22 @@ impl InstallService {
         } else {
             await_futures!(runners.iter().map(|r| r.install_bin_path()))
                 .map_err(InstallServiceError::MultiInstall)?;
-            Ok(())
+            let tmp_dir = workspace.cache_dir().join(nanoid!());
+            fs::rename(workspace.base_dir(), &tmp_dir)
+                .await
+                .map_err(|err| Error::new_fatal(err.into()))?;
+            match fs::rename(tmp_workspace.base_dir(), workspace.base_dir()).await {
+                Ok(_) => {}
+                Err(err) => {
+                    fs::rename(&tmp_dir, workspace.base_dir())
+                        .await
+                        .map_err(|err| Error::new_fatal(err.into()))?;
+                    Err(Error::new_fatal(err.into()))?;
+                }
+            }
+            fs_ext::clean_dir(tmp_dir)
+                .await
+                .map_err(|err| Error::new_fatal(err.into()))
         }
     }
 }

@@ -19,7 +19,7 @@ pub struct Workspace {
 
 impl Workspace {
     #[allow(dead_code)]
-    fn new(id: String, base_unique_workspace_dir: PathBuf, unique_cache_dir: PathBuf) -> Self {
+    pub fn new(id: String, base_unique_workspace_dir: PathBuf, unique_cache_dir: PathBuf) -> Self {
         let home_dir = base_unique_workspace_dir.join("home");
         let bin_dir = home_dir.join("bin");
         Self {
