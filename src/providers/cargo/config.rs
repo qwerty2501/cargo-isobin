@@ -41,4 +41,6 @@ pub struct CargoInstallDependencyDetail {
     features: Option<Vec<String>>,
     #[serde(alias = "no-default-features", alias = "noDefaultFeatures")]
     no_default_features: Option<bool>,
+    #[serde(alias = "all-features", alias = "allFeatures")]
+    all_features: Option<bool>,
 }

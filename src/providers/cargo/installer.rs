@@ -83,6 +83,12 @@ impl CargoCoreInstaller {
         if let Some(features) = dependency.features() {
             args.extend_from_slice(&["--features".into(), features.join(",")]);
         }
+
+        if let Some(all_features) = dependency.all_features() {
+            if *all_features {
+                args.push("--all-features".into());
+            }
+        }
         args
     }
 }

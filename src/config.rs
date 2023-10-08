@@ -201,6 +201,7 @@ mod tests {
             Default::default(),
             Default::default(),
             Default::default(),
+            Default::default(),
         );
         cargos.push((
             "comrak".to_string(),
@@ -210,6 +211,7 @@ mod tests {
         let cargo_make_dependency_detail = CargoInstallDependencyDetail::new(
             Default::default(),
             Some("2.0".into()),
+            Default::default(),
             Default::default(),
             Default::default(),
             Default::default(),
