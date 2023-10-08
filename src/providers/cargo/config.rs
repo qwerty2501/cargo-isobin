@@ -15,35 +15,30 @@ pub enum CargoInstallDependency {
     Detailed(CargoInstallDependencyDetail),
 }
 impl CargoInstallDependency {
-    pub fn into_detail(self) -> CargoInstallDependencyDetail {
+    pub fn to_detail(&self) -> CargoInstallDependencyDetail {
         match self {
             Self::Simple(version) => CargoInstallDependencyDetail {
-                version: Some(version),
+                version: Some(version.into()),
                 ..Default::default()
             },
-            Self::Detailed(detail) => detail,
+            Self::Detailed(detail) => detail.clone(),
         }
     }
 }
 
 #[allow(clippy::too_many_arguments)]
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, Getters)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, new, Deserialize, Getters)]
 pub struct CargoInstallDependencyDetail {
-    #[serde(default)]
-    pub bins: Vec<String>,
-    pub version: Option<String>,
-    pub registry: Option<String>,
-    #[serde(alias = "registry-index", alias = "registryIndex")]
-    pub registry_index: Option<String>,
-    pub path: Option<String>,
-    pub git: Option<String>,
-    pub branch: Option<String>,
-    pub tag: Option<String>,
-    pub rev: Option<String>,
-    #[serde(default)]
-    pub features: Vec<String>,
-    #[serde(default)]
-    pub optional: bool,
-    #[serde(alias = "default-features", alias = "defaultFeatures")]
-    pub default_features: Option<bool>,
+    bins: Option<Vec<String>>,
+    version: Option<String>,
+    registry: Option<String>,
+    index: Option<String>,
+    path: Option<String>,
+    git: Option<String>,
+    branch: Option<String>,
+    tag: Option<String>,
+    rev: Option<String>,
+    features: Option<Vec<String>>,
+    #[serde(alias = "no-default-features", alias = "noDefaultFeatures")]
+    no_default_features: Option<bool>,
 }

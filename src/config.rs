@@ -189,16 +189,37 @@ mod tests {
     #[allow(clippy::field_reassign_with_default)]
     fn table_cargos() -> Vec<(String, CargoInstallDependency)> {
         let mut cargos = vec![];
-        let mut comrak_dependency_detail = CargoInstallDependencyDetail::default();
-        comrak_dependency_detail.version = Some("1.0".into());
-        comrak_dependency_detail.git = Some("git@github.com:kivikakk/comrak.git".into());
+        let comrak_dependency_detail = CargoInstallDependencyDetail::new(
+            Default::default(),
+            Some("1.0".into()),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            Some("git@github.com:kivikakk/comrak.git".into()),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+        );
         cargos.push((
             "comrak".to_string(),
             CargoInstallDependency::Detailed(comrak_dependency_detail),
         ));
 
-        let mut cargo_make_dependency_detail = CargoInstallDependencyDetail::default();
-        cargo_make_dependency_detail.version = Some("2.0".into());
+        let cargo_make_dependency_detail = CargoInstallDependencyDetail::new(
+            Default::default(),
+            Some("2.0".into()),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+        );
         cargos.push((
             "cargo-make".to_string(),
             CargoInstallDependency::Detailed(cargo_make_dependency_detail),

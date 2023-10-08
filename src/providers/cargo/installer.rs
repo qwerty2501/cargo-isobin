@@ -1,8 +1,13 @@
 use std::path::PathBuf;
 
+use tokio::process::Command;
+
 use crate::{
     paths::workspace::Workspace,
-    utils::fs_ext::{enumerate_executable_files, make_hard_links_in_dir},
+    utils::{
+        command_ext::run_commnad,
+        fs_ext::{enumerate_executable_files, make_hard_links_in_dir},
+    },
 };
 
 use super::*;
@@ -27,7 +32,7 @@ impl InstallerFactory for CargoInstallerFactory {
     type CoreInstaller = CargoCoreInstaller;
     type BinPathInstaller = CargoBinPathInstaller;
     async fn create_core_installer(&self) -> Result<Self::CoreInstaller> {
-        Ok(CargoCoreInstaller {})
+        Ok(CargoCoreInstaller::new(self.cargo_workspace.clone()))
     }
     async fn create_bin_path_installer(&self) -> Result<Self::BinPathInstaller> {
         Ok(CargoBinPathInstaller::new(
@@ -37,7 +42,50 @@ impl InstallerFactory for CargoInstallerFactory {
     }
 }
 
-pub struct CargoCoreInstaller {}
+#[derive(new)]
+pub struct CargoCoreInstaller {
+    cargo_workspace: CargoWorkspace,
+}
+
+impl CargoCoreInstaller {
+    fn dependency_to_args(dependency: &CargoInstallDependencyDetail) -> Vec<String> {
+        let mut args: Vec<String> = vec![];
+        if let Some(version) = dependency.version() {
+            args.extend_from_slice(&["--version".into(), version.into()]);
+        }
+        if let Some(registry) = dependency.registry() {
+            args.extend_from_slice(&["--registry".into(), registry.into()]);
+        }
+        if let Some(index) = dependency.index() {
+            args.extend_from_slice(&["--index".into(), index.into()]);
+        }
+        if let Some(path) = dependency.path() {
+            args.extend_from_slice(&["--path".into(), path.into()]);
+        }
+        if let Some(git) = dependency.git() {
+            args.extend_from_slice(&["--git".into(), git.into()]);
+        }
+        if let Some(branch) = dependency.branch() {
+            args.extend_from_slice(&["--branch".into(), branch.into()]);
+        }
+        if let Some(tag) = dependency.tag() {
+            args.extend_from_slice(&["--tag".into(), tag.into()]);
+        }
+        if let Some(rev) = dependency.rev() {
+            args.extend_from_slice(&["--rev".into(), rev.into()]);
+        }
+
+        if let Some(bins) = dependency.bins() {
+            for bin in bins.iter() {
+                args.extend_from_slice(&["--bin".into(), bin.into()]);
+            }
+        }
+        if let Some(features) = dependency.features() {
+            args.extend_from_slice(&["--features".into(), features.join(",")]);
+        }
+        args
+    }
+}
 
 #[async_trait]
 impl providers::CoreInstaller for CargoCoreInstaller {
@@ -50,9 +98,22 @@ impl providers::CoreInstaller for CargoCoreInstaller {
         providers::MultiInstallMode::Parallel
     }
 
-    #[allow(unused_variables)]
     async fn install(&self, target: &Self::InstallTarget) -> Result<()> {
-        todo!()
+        let mut command = Command::new("cargo");
+        let mut args: Vec<String> = vec![
+            "install".into(),
+            "--force".into(),
+            "--root".into(),
+            self.cargo_workspace
+                .cargo_home_dir()
+                .to_string_lossy()
+                .into(),
+        ];
+        let dependency = target.install_dependency().to_detail();
+        args.extend_from_slice(&Self::dependency_to_args(&dependency));
+        args.push(target.name().into());
+        command.args(args);
+        run_commnad(command).await
     }
 }
 

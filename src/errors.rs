@@ -1,4 +1,5 @@
 use crate::paths::isobin_config::IsobinConfigPathError;
+use crate::utils::command_ext::RunCommandError;
 use crate::utils::serde_ext::SerdeExtError;
 use crate::InstallServiceError;
 use crate::IsobinConfigError;
@@ -13,6 +14,8 @@ pub enum Error {
     Serde(#[from] SerdeExtError),
     #[error("{0}")]
     InstallService(#[from] InstallServiceError),
+    #[error("{0}")]
+    RunCommand(#[from] RunCommandError),
     #[error("{0}")]
     Fatal(#[source] anyhow::Error),
 }
