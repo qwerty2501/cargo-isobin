@@ -92,6 +92,7 @@ impl CargoCoreInstaller {
         args
     }
 }
+const INSTALL_PROVIDER_NAME: &str = "cargo";
 
 #[async_trait]
 impl providers::CoreInstaller for CargoCoreInstaller {
@@ -105,7 +106,7 @@ impl providers::CoreInstaller for CargoCoreInstaller {
     }
 
     async fn install(&self, target: &Self::InstallTarget) -> Result<()> {
-        let mut command = Command::new("cargo");
+        let mut command = Command::new(INSTALL_PROVIDER_NAME);
         let mut args: Vec<String> = vec![
             "install".into(),
             "--force".into(),
@@ -119,7 +120,14 @@ impl providers::CoreInstaller for CargoCoreInstaller {
         args.extend_from_slice(&Self::dependency_to_args(&dependency));
         args.push(target.name().into());
         command.args(args);
-        run_commnad(command).await
+        run_commnad(command).await.map_err(|err| {
+            InstallServiceError::new_install(
+                INSTALL_PROVIDER_NAME.into(),
+                target.name().clone(),
+                Box::new(err),
+            )
+            .into()
+        })
     }
 }
 

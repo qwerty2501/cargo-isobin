@@ -256,6 +256,13 @@ pub enum InstallServiceError {
     #[error("occurred multi error")]
     MultiInstall(Vec<Error>),
 
+    #[error("provider:{provider}\nname:{name},error:{error}")]
+    Install {
+        provider: String,
+        name: String,
+        error: Box<Error>,
+    },
+
     #[error("duplicate bins:{0:#?}")]
     DuplicateBin(Vec<String>),
 }
