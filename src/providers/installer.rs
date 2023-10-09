@@ -26,7 +26,9 @@ pub enum MultiInstallMode {
     Sequential,
 }
 
-pub trait InstallTarget: 'static + Send + Sync {}
+pub trait InstallTarget: 'static + Send + Sync {
+    fn name(&self) -> &str;
+}
 
 #[async_trait]
 pub trait BinPathInstaller: 'static + Send + Sync {

@@ -132,7 +132,11 @@ pub struct CargoInstallTarget {
 }
 
 #[async_trait]
-impl providers::InstallTarget for CargoInstallTarget {}
+impl providers::InstallTarget for CargoInstallTarget {
+    fn name(&self) -> &str {
+        &self.name
+    }
+}
 
 pub struct CargoBinPathInstaller {
     cargo_workspace: CargoWorkspace,
