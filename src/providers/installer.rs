@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 #[async_trait]
 pub trait InstallerFactory: 'static + Send + Sync {
+    const INSTALLER_NAME: &'static str;
     type InstallTarget: InstallTarget;
     type CoreInstaller: CoreInstaller<InstallTarget = Self::InstallTarget>;
     type BinPathInstaller: BinPathInstaller<InstallTarget = Self::InstallTarget>;
@@ -12,6 +13,7 @@ pub trait InstallerFactory: 'static + Send + Sync {
 
 #[async_trait]
 pub trait CoreInstaller: 'static + Send + Sync {
+    const INSTALLER_NAME: &'static str;
     type InstallTarget: InstallTarget;
 
     fn provider_kind(&self) -> providers::ProviderKind;

@@ -5,7 +5,7 @@ use tokio::process::Command;
 use crate::{
     paths::workspace::Workspace,
     utils::{
-        command_ext::run_commnad,
+        command_ext::run_install_command,
         fs_ext::{enumerate_executable_files, make_hard_links_in_dir},
     },
 };
@@ -28,6 +28,7 @@ impl CargoInstallerFactory {
 
 #[async_trait]
 impl InstallerFactory for CargoInstallerFactory {
+    const INSTALLER_NAME: &'static str = CargoCoreInstaller::INSTALLER_NAME;
     type InstallTarget = CargoInstallTarget;
     type CoreInstaller = CargoCoreInstaller;
     type BinPathInstaller = CargoBinPathInstaller;
@@ -92,10 +93,10 @@ impl CargoCoreInstaller {
         args
     }
 }
-const INSTALL_PROVIDER_NAME: &str = "cargo";
 
 #[async_trait]
 impl providers::CoreInstaller for CargoCoreInstaller {
+    const INSTALLER_NAME: &'static str = "cargo";
     type InstallTarget = CargoInstallTarget;
 
     fn provider_kind(&self) -> providers::ProviderKind {
@@ -106,7 +107,7 @@ impl providers::CoreInstaller for CargoCoreInstaller {
     }
 
     async fn install(&self, target: &Self::InstallTarget) -> Result<()> {
-        let mut command = Command::new(INSTALL_PROVIDER_NAME);
+        let mut command = Command::new(Self::INSTALLER_NAME);
         let mut args: Vec<String> = vec![
             "install".into(),
             "--force".into(),
@@ -120,14 +121,7 @@ impl providers::CoreInstaller for CargoCoreInstaller {
         args.extend_from_slice(&Self::dependency_to_args(&dependency));
         args.push(target.name().into());
         command.args(args);
-        run_commnad(command).await.map_err(|err| {
-            InstallServiceError::new_install(
-                INSTALL_PROVIDER_NAME.into(),
-                target.name().clone(),
-                Box::new(err),
-            )
-            .into()
-        })
+        run_install_command(Self::INSTALLER_NAME, target.name(), command).await
     }
 }
 
