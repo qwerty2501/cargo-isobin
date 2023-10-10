@@ -127,38 +127,35 @@ mod tests {
     #[case(
         ConfigFileExtensions::Toml,
         "testdata/isobin_configs/default_load.yaml",
-        Error::new_serde(
             SerdeExtError::new_deserialize_with_hint(
                 anyhow!("expected an equals, found a colon at line 1 column 6"),
                 with_current_source_dir("testdata/isobin_configs/default_load.yaml"),
                 ErrorHint::new(1,6,include_str!("testdata/isobin_configs/default_load.yaml").into()),
-            )),
+            ),
         )]
     #[case(
         ConfigFileExtensions::Yaml,
         "testdata/isobin_configs/default_load.toml",
-        Error::new_serde(
             SerdeExtError::new_deserialize_with_hint(
-                anyhow!("did not find expected <document start> at line 2 column 1\n\nCaused by:\n    did not find expected <document start> at line 2 column 1"),
+                anyhow!("did not find expected <document start> at line 2 column 1"),
                 with_current_source_dir("testdata/isobin_configs/default_load.toml"),
                 ErrorHint::new(2,1,include_str!("testdata/isobin_configs/default_load.toml").into()),
-            )),
+            ),
         )]
     #[case(
         ConfigFileExtensions::Json,
         "testdata/isobin_configs/default_load.toml",
-        Error::new_serde(
             SerdeExtError::new_deserialize_with_hint(
                 anyhow!("expected value at line 1 column 2"),
                 with_current_source_dir("testdata/isobin_configs/default_load.toml"),
                 ErrorHint::new(1,2,include_str!("testdata/isobin_configs/default_load.toml").into()),
-            )),
+            ),
         )]
     #[tokio::test]
     async fn isobin_config_from_str_error_works(
         #[case] ft: ConfigFileExtensions,
         #[case] path: impl AsRef<Path>,
-        #[case] expected: Error,
+        #[case] expected: SerdeExtError,
     ) {
         let path = current_source_dir!().join(path);
         let result = IsobinConfig::parse(ft, path).await;
@@ -244,9 +241,12 @@ mod tests {
     }
 
     #[rstest]
-    #[case("foo.fm", IsobinConfigError::new_unknown_file_extension("foo.fm".into(), "fm".into()).into())]
-    #[case("foo", IsobinConfigError::new_nothing_file_extension("foo".into()).into())]
-    fn get_config_file_extension_error_works(#[case] path: &str, #[case] expected: Error) {
+    #[case("foo.fm", IsobinConfigError::new_unknown_file_extension("foo.fm".into(), "fm".into()))]
+    #[case("foo", IsobinConfigError::new_nothing_file_extension("foo".into()))]
+    fn get_config_file_extension_error_works(
+        #[case] path: &str,
+        #[case] expected: IsobinConfigError,
+    ) {
         let result = IsobinConfig::get_file_extension(path);
         assert_error_result!(expected, result);
     }

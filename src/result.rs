@@ -1,3 +1,1 @@
-use super::errors;
-
-pub type Result<T> = std::result::Result<T, errors::Error>;
+pub type Result<T> = anyhow::Result<T>;

@@ -18,8 +18,7 @@ pub async fn run_install_command(
     command: Command,
 ) -> Result<()> {
     run_commnad(command).await.map_err(|err| {
-        InstallServiceError::new_install(installer_name.into(), target_name.into(), Box::new(err))
-            .into()
+        InstallServiceError::new_install(installer_name.into(), target_name.into(), err).into()
     })
 }
 
@@ -34,6 +33,6 @@ pub async fn run_commnad(mut command: Command) -> Result<()> {
                 Err(RunCommandError::new(output.status, stdout.into(), stderr.into()).into())
             }
         }
-        Err(err) => Err(crate::errors::Error::new_fatal(err.into())),
+        Err(err) => Err(err.into()),
     }
 }

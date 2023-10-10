@@ -60,9 +60,7 @@ impl InstallService {
             workspace.cache_dir().join(nanoid!()),
             workspace.cache_dir().clone(),
         );
-        fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir())
-            .await
-            .map_err(|err| Error::new_fatal(err.into()))?;
+        fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir()).await?;
         let cargo_installer_factory = CargoInstallerFactory::new(tmp_workspace.clone());
         let cargo_runner = InstallRunnerProvider::make_cargo_runner(
             &cargo_installer_factory,
@@ -99,21 +97,15 @@ impl InstallService {
             await_futures!(runners.iter().map(|r| r.install_bin_path()))
                 .map_err(InstallServiceError::MultiInstall)?;
             let tmp_dir = workspace.cache_dir().join(nanoid!());
-            fs::rename(workspace.base_dir(), &tmp_dir)
-                .await
-                .map_err(|err| Error::new_fatal(err.into()))?;
+            fs::rename(workspace.base_dir(), &tmp_dir).await?;
             match fs::rename(tmp_workspace.base_dir(), workspace.base_dir()).await {
                 Ok(_) => {}
                 Err(err) => {
-                    fs::rename(&tmp_dir, workspace.base_dir())
-                        .await
-                        .map_err(|err| Error::new_fatal(err.into()))?;
-                    Err(Error::new_fatal(err.into()))?;
+                    fs::rename(&tmp_dir, workspace.base_dir()).await?;
+                    Err(err)?;
                 }
             }
-            fs_ext::clean_dir(tmp_dir)
-                .await
-                .map_err(|err| Error::new_fatal(err.into()))
+            Ok(fs_ext::clean_dir(tmp_dir).await?)
         }
     }
 }
@@ -260,7 +252,7 @@ pub enum InstallServiceError {
     Install {
         provider: String,
         name: String,
-        error: Box<Error>,
+        error: Error,
     },
 
     #[error("duplicate bins:{0:#?}")]

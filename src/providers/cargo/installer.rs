@@ -157,16 +157,13 @@ impl BinPathInstaller for CargoBinPathInstaller {
     type InstallTarget = CargoInstallTarget;
 
     async fn bin_paths(&self) -> Result<Vec<PathBuf>> {
-        enumerate_executable_files(self.cargo_workspace.cargo_bin_dir())
-            .await
-            .map_err(|e| Error::new_fatal(e.into()))
+        Ok(enumerate_executable_files(self.cargo_workspace.cargo_bin_dir()).await?)
     }
     async fn install_bin_path(&self, _: &[Self::InstallTarget]) -> Result<()> {
-        make_hard_links_in_dir(
+        Ok(make_hard_links_in_dir(
             self.cargo_workspace.cargo_bin_dir(),
             self.workspace.bin_dir(),
         )
-        .await
-        .map_err(|e| Error::new_fatal(e.into()))
+        .await?)
     }
 }

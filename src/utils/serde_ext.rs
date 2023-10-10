@@ -258,13 +258,10 @@ async fn read_string_for_deserialize(path: impl AsRef<Path>) -> Result<String> {
 fn default_if_not_found<T: Default>(result: Result<T>) -> Result<T> {
     match result {
         Ok(v) => Ok(v),
-        Err(err) => {
-            if let Error::Serde(SerdeExtError::NotFound { error: _, path: _ }) = err {
-                Ok(Default::default())
-            } else {
-                Err(err)
-            }
-        }
+        Err(err) => match err.downcast::<SerdeExtError>() {
+            Ok(_) => Ok(Default::default()),
+            Err(err) => Err(err),
+        },
     }
 }
 

@@ -7,13 +7,22 @@ pub mod test_util {
             Path::new(FILE).parent().unwrap()
         }};
     }
+
     #[macro_export]
     macro_rules! assert_error_result {
         ($expected:expr,$result:expr) => {
             if let Err(err) = $result {
-                use std::any::Any;
-                std::assert_eq!($expected.type_id(), err.type_id());
-                pretty_assertions::assert_eq!(format!("{:?}", $expected), format!("{:?}", err));
+                fn assert_err_eq<E: std::fmt::Display + std::fmt::Debug + Send + Sync + 'static>(
+                    expected: E,
+                    err: anyhow::Error,
+                ) {
+                    if let Ok(err) = err.downcast::<E>() {
+                        pretty_assertions::assert_eq!(format!("{}", expected), format!("{}", err));
+                    } else {
+                        panic!("unexpected error type");
+                    }
+                }
+                assert_err_eq($expected, err);
             } else {
                 panic!("unexpected result ok");
             }
