@@ -3,7 +3,6 @@ use std::path::PathBuf;
 
 #[async_trait]
 pub trait InstallerFactory: 'static + Send + Sync {
-    const INSTALLER_NAME: &'static str;
     type InstallTarget: InstallTarget;
     type CoreInstaller: CoreInstaller<InstallTarget = Self::InstallTarget>;
     type BinPathInstaller: BinPathInstaller<InstallTarget = Self::InstallTarget>;
@@ -13,9 +12,7 @@ pub trait InstallerFactory: 'static + Send + Sync {
 
 #[async_trait]
 pub trait CoreInstaller: 'static + Send + Sync {
-    const INSTALLER_NAME: &'static str;
     type InstallTarget: InstallTarget;
-
     fn provider_kind(&self) -> providers::ProviderKind;
     fn multi_install_mode(&self) -> MultiInstallMode;
     async fn install(&self, target: &Self::InstallTarget) -> Result<()>;
@@ -27,12 +24,13 @@ pub enum MultiInstallMode {
 }
 
 pub trait InstallTarget: 'static + Send + Sync {
+    fn provider_kind(&self) -> ProviderKind;
     fn name(&self) -> &str;
 }
 
 #[async_trait]
 pub trait BinPathInstaller: 'static + Send + Sync {
     type InstallTarget: InstallTarget;
-    async fn bin_paths(&self) -> Result<Vec<PathBuf>>;
+    async fn bin_paths(&self, targets: &[Self::InstallTarget]) -> Result<Vec<PathBuf>>;
     async fn install_bin_path(&self, targets: &[Self::InstallTarget]) -> Result<()>;
 }

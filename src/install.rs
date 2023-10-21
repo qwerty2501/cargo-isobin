@@ -210,7 +210,7 @@ impl<
         }
     }
     async fn bin_paths(&self) -> Result<Vec<PathBuf>> {
-        self.bin_path_installer.bin_paths().await
+        self.bin_path_installer.bin_paths(&self.targets).await
     }
     async fn install_bin_path(&self) -> Result<()> {
         self.bin_path_installer

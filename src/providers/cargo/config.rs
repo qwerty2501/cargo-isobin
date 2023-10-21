@@ -14,17 +14,6 @@ pub enum CargoInstallDependency {
     Simple(String),
     Detailed(CargoInstallDependencyDetail),
 }
-impl CargoInstallDependency {
-    pub fn to_detail(&self) -> CargoInstallDependencyDetail {
-        match self {
-            Self::Simple(version) => CargoInstallDependencyDetail {
-                version: Some(version.into()),
-                ..Default::default()
-            },
-            Self::Detailed(detail) => detail.clone(),
-        }
-    }
-}
 
 #[allow(clippy::too_many_arguments)]
 #[derive(Debug, Clone, PartialEq, Default, Serialize, new, Deserialize, Getters)]

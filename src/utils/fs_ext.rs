@@ -1,7 +1,8 @@
+use super::*;
 use std::path::{Path, PathBuf};
 use tokio::{fs, fs::File};
 
-pub async fn create_dir_if_not_exists(dir: impl AsRef<Path>) -> Result<(), std::io::Error> {
+pub async fn create_dir_if_not_exists(dir: impl AsRef<Path>) -> Result<()> {
     let dir = dir.as_ref();
     if !dir.exists() {
         fs::create_dir_all(&dir).await?;
@@ -9,23 +10,19 @@ pub async fn create_dir_if_not_exists(dir: impl AsRef<Path>) -> Result<(), std::
     Ok(())
 }
 
-pub async fn open_file_create_if_not_exists(
-    file_path: impl AsRef<Path>,
-) -> Result<File, std::io::Error> {
+pub async fn open_file_create_if_not_exists(file_path: impl AsRef<Path>) -> Result<File> {
     let file_path = file_path.as_ref();
     if let Some(dir) = file_path.parent() {
         create_dir_if_not_exists(dir).await?;
     }
     if !file_path.exists() {
-        File::create(file_path).await
+        Ok(File::create(file_path).await?)
     } else {
-        File::open(file_path).await
+        Ok(File::open(file_path).await?)
     }
 }
 
-pub async fn enumerate_executable_files(
-    dir: impl AsRef<Path>,
-) -> Result<Vec<PathBuf>, tokio::io::Error> {
+pub async fn enumerate_executable_files(dir: impl AsRef<Path>) -> Result<Vec<PathBuf>> {
     let dir = dir.as_ref();
     if dir.is_dir() {
         let dir = dir.read_dir()?;
@@ -48,7 +45,7 @@ pub async fn enumerate_executable_files(
 pub async fn make_hard_links_in_dir(
     from_dir: impl AsRef<Path>,
     to_dir: impl AsRef<Path>,
-) -> Result<(), tokio::io::Error> {
+) -> Result<()> {
     let from_dir = from_dir.as_ref();
     let to_dir = to_dir.as_ref();
     create_dir_if_not_exists(to_dir).await?;
@@ -65,7 +62,7 @@ pub async fn make_hard_links_in_dir(
     }
 }
 
-pub async fn clean_dir(dir: impl AsRef<Path>) -> Result<(), tokio::io::Error> {
+pub async fn clean_dir(dir: impl AsRef<Path>) -> Result<()> {
     let dir = dir.as_ref();
     create_dir_if_not_exists(dir).await?;
     fs::remove_dir_all(dir).await?;

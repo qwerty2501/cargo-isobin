@@ -6,6 +6,7 @@ extern crate derive_getters;
 
 mod config;
 mod errors;
+mod fronts;
 mod install;
 mod macros;
 mod paths;
