@@ -1,42 +1,45 @@
 use indicatif::{ProgressBar, ProgressStyle};
 
-use crate::{providers::InstallTarget, Result};
+use crate::{
+    providers::{InstallTarget, ProviderKind},
+    Result,
+};
 
-#[derive(new, Getters, Clone)]
+#[derive(Clone)]
 pub struct Progress {
     progress_bar: ProgressBar,
+    provider_kind: ProviderKind,
+    name: String,
 }
 
 impl Progress {
-    pub fn start(&self, install_target: &impl InstallTarget) -> Result<()> {
+    pub fn new(progress_bar: ProgressBar, install_target: &impl InstallTarget) -> Self {
+        Self {
+            progress_bar,
+            provider_kind: install_target.provider_kind(),
+            name: install_target.name().into(),
+        }
+    }
+    pub fn start(&self) -> Result<()> {
         self.progress_bar
             .set_style(ProgressStyle::with_template("{spinner} {msg}")?);
-        self.progress_bar.set_message(format!(
-            "{}/{}",
-            install_target.provider_kind(),
-            install_target.name()
-        ));
+        self.progress_bar
+            .set_message(format!("{}/{}", self.provider_kind, self.name));
         Ok(())
     }
 
-    pub fn done(&self, install_target: &impl InstallTarget) -> Result<()> {
+    pub fn done(&self) -> Result<()> {
         self.progress_bar
             .set_style(ProgressStyle::with_template("{msg.green}")?);
-        self.progress_bar.set_message(format!(
-            "{}/{} done",
-            install_target.provider_kind(),
-            install_target.name()
-        ));
+        self.progress_bar
+            .set_message(format!("{}/{} done", self.provider_kind, self.name));
         Ok(())
     }
-    pub fn failed(&self, install_target: &impl InstallTarget) -> Result<()> {
+    pub fn failed(&self) -> Result<()> {
         self.progress_bar
             .set_style(ProgressStyle::with_template("{msg.red}")?);
-        self.progress_bar.set_message(format!(
-            "{}/{} failed",
-            install_target.provider_kind(),
-            install_target.name()
-        ));
+        self.progress_bar
+            .set_message(format!("{}/{} failed", self.provider_kind, self.name));
         Ok(())
     }
 }

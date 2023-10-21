@@ -7,7 +7,7 @@ mod installer;
 
 pub use installer::*;
 
-#[derive(PartialEq, Debug, IntoStaticStr, Display)]
+#[derive(PartialEq, Debug, Clone, IntoStaticStr, Display)]
 pub enum ProviderKind {
     #[strum(serialize = "cargo")]
     Cargo,
