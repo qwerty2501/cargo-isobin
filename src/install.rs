@@ -77,11 +77,13 @@ impl InstallService {
         tmp_workspace: &Workspace,
         runners: Vec<Arc<dyn InstallRunner>>,
     ) -> Result<()> {
-        await_futures!(runners.iter().map(|r| r.run_installs()))
+        join_futures!(runners.iter().map(|r| r.run_installs()))
+            .await
             .map_err(InstallServiceError::MultiInstall)?;
         let mut keys = HashSet::new();
         let mut duplicates = vec![];
-        for file_name in await_futures!(runners.iter().map(|r| r.bin_paths()))
+        for file_name in join_futures!(runners.iter().map(|r| r.bin_paths()))
+            .await
             .map_err(InstallServiceError::MultiInstall)?
             .into_iter()
             .flatten()
@@ -94,7 +96,8 @@ impl InstallService {
         if !duplicates.is_empty() {
             Err(InstallServiceError::new_duplicate_bin(duplicates).into())
         } else {
-            await_futures!(runners.iter().map(|r| r.install_bin_path()))
+            join_futures!(runners.iter().map(|r| r.install_bin_path()))
+                .await
                 .map_err(InstallServiceError::MultiInstall)?;
             let tmp_dir = workspace.cache_dir().join(nanoid!());
             fs::rename(workspace.base_dir(), &tmp_dir).await?;
@@ -210,12 +213,22 @@ impl<
         }
     }
     async fn bin_paths(&self) -> Result<Vec<PathBuf>> {
-        self.bin_path_installer.bin_paths(&self.targets).await
+        let bin_paths = join_futures!(self
+            .targets
+            .iter()
+            .map(|target| self.bin_path_installer.bin_paths(target)))
+        .await
+        .map_err(InstallServiceError::MultiInstall)?;
+        Ok(bin_paths.into_iter().flatten().collect())
     }
     async fn install_bin_path(&self) -> Result<()> {
-        self.bin_path_installer
-            .install_bin_path(&self.targets)
-            .await
+        join_futures!(self
+            .targets
+            .iter()
+            .map(|target| self.bin_path_installer.install_bin_path(target)))
+        .await
+        .map_err(InstallServiceError::MultiInstall)?;
+        Ok(())
     }
 }
 

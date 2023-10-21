@@ -161,27 +161,22 @@ impl CargoBinPathInstaller {
 impl BinPathInstaller for CargoBinPathInstaller {
     type InstallTarget = CargoInstallTarget;
 
-    async fn bin_paths(&self, targets: &[Self::InstallTarget]) -> Result<Vec<PathBuf>> {
-        let bin_paths = await_futures!(targets.iter().map(|target| {
-            enumerate_executable_files(
-                self.cargo_workspace
-                    .cargo_home_dir()
-                    .join(target.name())
-                    .join("bin"),
-            )
-        }))
-        .map_err(InstallServiceError::MultiInstall)?;
-        Ok(bin_paths.into_iter().flatten().collect())
-    }
-    async fn install_bin_path(&self, targets: &[Self::InstallTarget]) -> Result<()> {
-        for target in targets.iter() {
-            let cargo_bin_dir = self
-                .cargo_workspace
+    async fn bin_paths(&self, target: &Self::InstallTarget) -> Result<Vec<PathBuf>> {
+        enumerate_executable_files(
+            self.cargo_workspace
                 .cargo_home_dir()
                 .join(target.name())
-                .join("bin");
-            make_hard_links_in_dir(cargo_bin_dir, self.workspace.bin_dir()).await?
-        }
+                .join("bin"),
+        )
+        .await
+    }
+    async fn install_bin_path(&self, target: &Self::InstallTarget) -> Result<()> {
+        let cargo_bin_dir = self
+            .cargo_workspace
+            .cargo_home_dir()
+            .join(target.name())
+            .join("bin");
+        make_hard_links_in_dir(cargo_bin_dir, self.workspace.bin_dir()).await?;
         Ok(())
     }
 }

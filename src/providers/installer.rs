@@ -31,6 +31,6 @@ pub trait InstallTarget: 'static + Send + Sync {
 #[async_trait]
 pub trait BinPathInstaller: 'static + Send + Sync {
     type InstallTarget: InstallTarget;
-    async fn bin_paths(&self, targets: &[Self::InstallTarget]) -> Result<Vec<PathBuf>>;
-    async fn install_bin_path(&self, targets: &[Self::InstallTarget]) -> Result<()>;
+    async fn bin_paths(&self, target: &Self::InstallTarget) -> Result<Vec<PathBuf>>;
+    async fn install_bin_path(&self, target: &Self::InstallTarget) -> Result<()>;
 }

@@ -30,21 +30,23 @@ pub mod test_util {
     }
 }
 #[macro_export]
-macro_rules! await_futures {
-    ($futures:expr) => {{
-        let mut targets = vec![];
-        let mut errs = vec![];
-        for future in $futures {
-            let result = future.await;
-            match result {
-                Ok(target) => targets.push(target),
-                Err(err) => errs.push(err),
+macro_rules! join_futures {
+    ($futures:expr) => {
+        async {
+            let mut targets = vec![];
+            let mut errs = vec![];
+            for future in $futures {
+                let result = future.await;
+                match result {
+                    Ok(target) => targets.push(target),
+                    Err(err) => errs.push(err),
+                }
+            }
+            if errs.is_empty() {
+                Ok(targets)
+            } else {
+                Err(errs)
             }
         }
-        if errs.is_empty() {
-            Ok(targets)
-        } else {
-            Err(errs)
-        }
-    }};
+    };
 }
