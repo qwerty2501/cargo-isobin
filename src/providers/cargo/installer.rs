@@ -155,6 +155,12 @@ impl CargoBinPathInstaller {
             workspace,
         }
     }
+    fn bin_dir(&self, target: &CargoInstallTarget) -> PathBuf {
+        self.cargo_workspace
+            .cargo_home_dir()
+            .join(target.name())
+            .join("bin")
+    }
 }
 
 #[async_trait]
@@ -162,20 +168,10 @@ impl BinPathInstaller for CargoBinPathInstaller {
     type InstallTarget = CargoInstallTarget;
 
     async fn bin_paths(&self, target: &Self::InstallTarget) -> Result<Vec<PathBuf>> {
-        enumerate_executable_files(
-            self.cargo_workspace
-                .cargo_home_dir()
-                .join(target.name())
-                .join("bin"),
-        )
-        .await
+        enumerate_executable_files(self.bin_dir(target)).await
     }
     async fn install_bin_path(&self, target: &Self::InstallTarget) -> Result<()> {
-        let cargo_bin_dir = self
-            .cargo_workspace
-            .cargo_home_dir()
-            .join(target.name())
-            .join("bin");
+        let cargo_bin_dir = self.bin_dir(target);
         make_hard_links_in_dir(cargo_bin_dir, self.workspace.bin_dir()).await?;
         Ok(())
     }
