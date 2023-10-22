@@ -270,10 +270,11 @@ pub enum InstallServiceError {
     #[error("occurred multi error")]
     MultiInstall(Vec<Error>),
 
-    #[error("provider:{provider}\nname:{name},error:{error}")]
+    #[error("{provider}/{name}\n{error_message}")]
     Install {
         provider: String,
         name: String,
+        error_message: String,
         error: Error,
     },
 

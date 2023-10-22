@@ -4,22 +4,12 @@ use tokio::process::Command;
 
 use super::*;
 
-#[derive(thiserror::Error, Debug, new)]
+#[derive(thiserror::Error, Getters, Debug, new)]
 #[error("{stderr}")]
 pub struct RunCommandError {
     exit_status: ExitStatus,
     stdout: String,
     stderr: String,
-}
-
-pub async fn run_install_command(
-    installer_name: impl Into<String>,
-    target_name: impl Into<String>,
-    command: Command,
-) -> Result<()> {
-    run_commnad(command).await.map_err(|err| {
-        InstallServiceError::new_install(installer_name.into(), target_name.into(), err).into()
-    })
 }
 
 pub async fn run_commnad(mut command: Command) -> Result<()> {

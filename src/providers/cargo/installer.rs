@@ -5,7 +5,7 @@ use tokio::process::Command;
 use crate::{
     paths::workspace::Workspace,
     utils::{
-        command_ext::run_install_command,
+        command_ext::{run_commnad, RunCommandError},
         fs_ext::{enumerate_executable_files, make_hard_links_in_dir},
     },
 };
@@ -119,7 +119,42 @@ impl providers::CoreInstaller for CargoCoreInstaller {
         args.extend_from_slice(&dependency_args);
         args.push(target.name().into());
         command.args(args);
-        run_install_command(PROVIDER_NAME, target.name(), command).await
+        run_commnad(command)
+            .await
+            .map_err(|err| match err.downcast::<RunCommandError>() {
+                Ok(err) => {
+                    let error_message = err
+                        .stderr()
+                        .lines()
+                        .filter(|line| line.matches("error").next().is_some())
+                        .fold(String::new(), |s, e| {
+                            if s.is_empty() {
+                                e.into()
+                            } else {
+                                [&s, e].join("\n")
+                            }
+                        });
+                    let error_message = if error_message.is_empty() {
+                        err.stderr().into()
+                    } else {
+                        error_message
+                    };
+                    InstallServiceError::new_install(
+                        PROVIDER_NAME.into(),
+                        target.name().into(),
+                        error_message,
+                        err.into(),
+                    )
+                    .into()
+                }
+                Err(err) => InstallServiceError::new_install(
+                    PROVIDER_NAME.into(),
+                    target.name().into(),
+                    err.to_string(),
+                    err,
+                )
+                .into(),
+            })
     }
 }
 
