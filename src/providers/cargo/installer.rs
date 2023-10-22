@@ -49,52 +49,42 @@ pub struct CargoCoreInstaller {
 }
 
 impl CargoCoreInstaller {
-    fn dependency_to_args(dependency: &CargoInstallDependency) -> Vec<String> {
-        let mut args: Vec<String> = vec![];
-        match dependency {
-            CargoInstallDependency::Simple(version) => {
-                args.extend_from_slice(&["--version".into(), version.into()]);
+    fn dependency_to_args(dependency: &CargoInstallDependencyDetail) -> Vec<String> {
+        let mut args: Vec<String> = vec!["--version".into(), dependency.version().into()];
+        if let Some(registry) = dependency.registry() {
+            args.extend_from_slice(&["--registry".into(), registry.into()]);
+        }
+        if let Some(index) = dependency.index() {
+            args.extend_from_slice(&["--index".into(), index.into()]);
+        }
+        if let Some(path) = dependency.path() {
+            args.extend_from_slice(&["--path".into(), path.into()]);
+        }
+        if let Some(git) = dependency.git() {
+            args.extend_from_slice(&["--git".into(), git.into()]);
+        }
+        if let Some(branch) = dependency.branch() {
+            args.extend_from_slice(&["--branch".into(), branch.into()]);
+        }
+        if let Some(tag) = dependency.tag() {
+            args.extend_from_slice(&["--tag".into(), tag.into()]);
+        }
+        if let Some(rev) = dependency.rev() {
+            args.extend_from_slice(&["--rev".into(), rev.into()]);
+        }
+
+        if let Some(bins) = dependency.bins() {
+            for bin in bins.iter() {
+                args.extend_from_slice(&["--bin".into(), bin.into()]);
             }
-            CargoInstallDependency::Detailed(dependency) => {
-                if let Some(version) = dependency.version() {
-                    args.extend_from_slice(&["--version".into(), version.into()]);
-                }
-                if let Some(registry) = dependency.registry() {
-                    args.extend_from_slice(&["--registry".into(), registry.into()]);
-                }
-                if let Some(index) = dependency.index() {
-                    args.extend_from_slice(&["--index".into(), index.into()]);
-                }
-                if let Some(path) = dependency.path() {
-                    args.extend_from_slice(&["--path".into(), path.into()]);
-                }
-                if let Some(git) = dependency.git() {
-                    args.extend_from_slice(&["--git".into(), git.into()]);
-                }
-                if let Some(branch) = dependency.branch() {
-                    args.extend_from_slice(&["--branch".into(), branch.into()]);
-                }
-                if let Some(tag) = dependency.tag() {
-                    args.extend_from_slice(&["--tag".into(), tag.into()]);
-                }
-                if let Some(rev) = dependency.rev() {
-                    args.extend_from_slice(&["--rev".into(), rev.into()]);
-                }
+        }
+        if let Some(features) = dependency.features() {
+            args.extend_from_slice(&["--features".into(), features.join(",")]);
+        }
 
-                if let Some(bins) = dependency.bins() {
-                    for bin in bins.iter() {
-                        args.extend_from_slice(&["--bin".into(), bin.into()]);
-                    }
-                }
-                if let Some(features) = dependency.features() {
-                    args.extend_from_slice(&["--features".into(), features.join(",")]);
-                }
-
-                if let Some(all_features) = dependency.all_features() {
-                    if *all_features {
-                        args.push("--all-features".into());
-                    }
-                }
+        if let Some(all_features) = dependency.all_features() {
+            if *all_features {
+                args.push("--all-features".into());
             }
         }
         args
@@ -120,7 +110,13 @@ impl providers::CoreInstaller for CargoCoreInstaller {
             "--root".into(),
             install_dir.to_string_lossy().into(),
         ];
-        args.extend_from_slice(&Self::dependency_to_args(target.install_dependency()));
+        let dependency_args = match target.install_dependency() {
+            CargoInstallDependency::Simple(version) => {
+                Self::dependency_to_args(&CargoInstallDependencyDetail::from_version(version))
+            }
+            CargoInstallDependency::Detailed(dependency) => Self::dependency_to_args(dependency),
+        };
+        args.extend_from_slice(&dependency_args);
         args.push(target.name().into());
         command.args(args);
         run_install_command(PROVIDER_NAME, target.name(), command).await
