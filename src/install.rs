@@ -267,7 +267,7 @@ impl InstallServiceOptionBuilder {
 
 #[derive(thiserror::Error, Debug, new)]
 pub enum InstallServiceError {
-    #[error("occurred multi error")]
+    #[error("{0:#?}")]
     MultiInstall(Vec<Error>),
 
     #[error("{provider}/{name}:\n{error_message}")]
@@ -278,6 +278,6 @@ pub enum InstallServiceError {
         error: Error,
     },
 
-    #[error("duplicate bins:{0:#?}")]
+    #[error("duplicate bins:\n{0:#?}")]
     DuplicateBin(Vec<String>),
 }
