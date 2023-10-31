@@ -28,7 +28,7 @@ impl Progress {
         self.progress_bar
             .enable_steady_tick(Duration::from_millis(100));
         self.progress_bar
-            .set_message(format!("{}/{}", self.provider_kind, self.name));
+            .set_message(format!("{}/{} installing", self.provider_kind, self.name));
         Ok(())
     }
 
