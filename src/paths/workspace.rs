@@ -85,7 +85,11 @@ impl WorkspacePathMap {
     async fn parse_from_config_dir(config_dir: impl AsRef<Path>) -> Result<WorkspacePathMap> {
         let workspace_path_map_file_path =
             config_dir.as_ref().join(Self::WORKSPACE_PATH_MAP_FILE_NAME);
-        Json::parse_from_file(workspace_path_map_file_path).await
+        if workspace_path_map_file_path.exists() {
+            Ok(Json::parse_from_file(workspace_path_map_file_path).await?)
+        } else {
+            Ok(WorkspacePathMap::default())
+        }
     }
 
     async fn save_to_config_dir(

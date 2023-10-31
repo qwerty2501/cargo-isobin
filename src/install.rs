@@ -52,6 +52,7 @@ impl InstallService {
             .isobin_config_path()
             .parent()
             .ok_or(IsobinConfigPathError::NotFoundIsobinConfig)?;
+        let isobin_config_dir = fs::canonicalize(isobin_config_dir).await?;
         let workspace = self
             .workspace_provider
             .base_unique_workspace_dir_from_isobin_config_dir(&isobin_config_dir)
@@ -89,7 +90,7 @@ impl InstallService {
             .flatten()
             .map(|p| p.file_name().unwrap().to_str().unwrap().to_string())
         {
-            if keys.insert(file_name.clone()) {
+            if !keys.insert(file_name.clone()) {
                 duplicates.push(file_name);
             }
         }
@@ -100,15 +101,23 @@ impl InstallService {
                 .await
                 .map_err(InstallServiceError::MultiInstall)?;
             let tmp_dir = workspace.cache_dir().join(nanoid!());
-            fs::rename(workspace.base_dir(), &tmp_dir).await?;
+            let need_tmp = workspace.base_dir().exists();
+            if need_tmp {
+                fs::rename(workspace.base_dir(), &tmp_dir).await?;
+            }
             match fs::rename(tmp_workspace.base_dir(), workspace.base_dir()).await {
                 Ok(_) => {}
                 Err(err) => {
-                    fs::rename(&tmp_dir, workspace.base_dir()).await?;
+                    if need_tmp {
+                        fs::rename(&tmp_dir, workspace.base_dir()).await?;
+                    }
                     Err(err)?;
                 }
             }
-            Ok(fs_ext::clean_dir(tmp_dir).await?)
+            if need_tmp {
+                fs_ext::clean_dir(tmp_dir).await?
+            }
+            Ok(())
         }
     }
 }

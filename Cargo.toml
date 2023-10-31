@@ -31,5 +31,5 @@ rstest = "0.12.0"
 
 
 [[bin]]
-name = "cargo-isobin"
+name = "isobin"
 path = "src/bin/isobin/main.rs"

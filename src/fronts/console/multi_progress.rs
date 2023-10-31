@@ -12,7 +12,7 @@ pub struct MultiProgress {
 impl MultiProgress {
     pub fn make_progress(&self, install_target: &impl InstallTarget) -> Progress {
         Progress::new(
-            self.multi_progress.add(IndicatifProgressBar::new(0)),
+            self.multi_progress.add(IndicatifProgressBar::hidden()),
             install_target,
         )
     }

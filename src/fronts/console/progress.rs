@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::{
@@ -23,6 +25,8 @@ impl Progress {
     pub fn start(&self) -> Result<()> {
         self.progress_bar
             .set_style(ProgressStyle::with_template("{spinner} {msg}")?);
+        self.progress_bar
+            .enable_steady_tick(Duration::from_millis(100));
         self.progress_bar
             .set_message(format!("{}/{}", self.provider_kind, self.name));
         Ok(())
