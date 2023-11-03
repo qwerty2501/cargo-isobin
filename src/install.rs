@@ -1,5 +1,6 @@
 use nanoid::nanoid;
 use tokio::fs;
+use tokio::sync::Mutex;
 
 use crate::fronts::MultiProgress;
 use crate::fronts::Progress;
@@ -78,19 +79,25 @@ impl InstallService {
         &self,
         workspace: &Workspace,
         tmp_workspace: &Workspace,
-        runners: Vec<Arc<dyn InstallRunner>>,
+        runners: Vec<Arc<Mutex<dyn InstallRunner>>>,
     ) -> Result<()> {
-        join_futures!(runners.iter().map(|r| r.run_installs()))
-            .await
-            .map_err(InstallServiceError::MultiInstall)?;
+        let install_runners = runners.clone();
+        join_futures!(install_runners
+            .into_iter()
+            .map(|r| async move { r.lock().await.run_installs().await }))
+        .await
+        .map_err(InstallServiceError::MultiInstall)?;
         let mut keys = HashSet::new();
         let mut duplicates = vec![];
-        for file_name in join_futures!(runners.iter().map(|r| r.bin_paths()))
-            .await
-            .map_err(InstallServiceError::MultiInstall)?
+        let file_name_runners = runners.clone();
+        for file_name in join_futures!(file_name_runners
             .into_iter()
-            .flatten()
-            .map(|p| p.file_name().unwrap().to_str().unwrap().to_string())
+            .map(|r| async move { r.lock().await.bin_paths().await }))
+        .await
+        .map_err(InstallServiceError::MultiInstall)?
+        .into_iter()
+        .flatten()
+        .map(|p| p.file_name().unwrap().to_str().unwrap().to_string())
         {
             if !keys.insert(file_name.clone()) {
                 duplicates.push(file_name);
@@ -99,9 +106,12 @@ impl InstallService {
         if !duplicates.is_empty() {
             Err(InstallServiceError::new_duplicate_bin(duplicates).into())
         } else {
-            join_futures!(runners.iter().map(|r| r.install_bin_path()))
-                .await
-                .map_err(InstallServiceError::MultiInstall)?;
+            let install_bin_path_runners = runners.clone();
+            join_futures!(install_bin_path_runners
+                .into_iter()
+                .map(|r| async move { r.lock().await.install_bin_path().await }))
+            .await
+            .map_err(InstallServiceError::MultiInstall)?;
             let tmp_dir = workspace.cache_dir().join(nanoid!());
             let need_tmp = workspace.base_dir().exists();
             if need_tmp {
@@ -124,8 +134,8 @@ impl InstallService {
     }
 }
 
-#[derive(Getters, new)]
-struct InstallTargetContext<IF: InstallTarget> {
+#[derive(Getters, new, Clone)]
+struct InstallTargetContext<IF: InstallTarget + Clone> {
     target: IF,
     progress: Progress,
 }
@@ -140,7 +150,7 @@ impl InstallRunnerProvider {
         &self,
         cargo_installer: &CargoInstallerFactory,
         cargo_config: &CargoConfig,
-    ) -> Result<Arc<dyn InstallRunner>> {
+    ) -> Result<Arc<Mutex<dyn InstallRunner>>> {
         let install_targets = cargo_config
             .installs()
             .iter()
@@ -155,7 +165,7 @@ impl InstallRunnerProvider {
         &self,
         installer_factory: &IF,
         targets: Vec<IF::InstallTarget>,
-    ) -> Result<Arc<dyn InstallRunner>> {
+    ) -> Result<Arc<Mutex<dyn InstallRunner>>> {
         let core_installer = installer_factory.create_core_installer().await?;
         let bin_path_installer = installer_factory.create_bin_path_installer().await?;
         let contexts = targets
@@ -167,11 +177,11 @@ impl InstallRunnerProvider {
                 Ok(context)
             })
             .collect::<Result<Vec<_>>>()?;
-        Ok(Arc::new(InstallRunnerImpl::new(
+        Ok(Arc::new(Mutex::new(InstallRunnerImpl::new(
             core_installer,
             bin_path_installer,
             contexts,
-        )))
+        ))))
     }
 }
 
@@ -202,19 +212,22 @@ impl<
 {
     async fn run_sequential_installs(&self) -> Result<()> {
         for context in self.contexts.iter() {
-            self.install(context).await?;
+            Self::install(self.core_installer.clone(), context.clone()).await?;
         }
         Ok(())
     }
     async fn run_parallel_installs(&self) -> Result<()> {
-        join_futures!(self.contexts.iter().map(|target| { self.install(target) }))
-            .await
-            .map_err(InstallServiceError::MultiInstall)?;
+        join_futures!(self
+            .contexts
+            .iter()
+            .map(|target| { Self::install(self.core_installer.clone(), target.clone()) }))
+        .await
+        .map_err(InstallServiceError::MultiInstall)?;
         Ok(())
     }
-    async fn install(&self, install_context: &InstallTargetContext<IT>) -> Result<()> {
+    async fn install(core_installer: CI, install_context: InstallTargetContext<IT>) -> Result<()> {
         install_context.progress().start()?;
-        match self.core_installer.install(install_context.target()).await {
+        match core_installer.install(install_context.target()).await {
             Ok(_) => {
                 install_context.progress().done()?;
                 Ok(())
@@ -245,19 +258,21 @@ impl<
         }
     }
     async fn bin_paths(&self) -> Result<Vec<PathBuf>> {
-        let bin_paths = join_futures!(self
-            .contexts
-            .iter()
-            .map(|context| self.bin_path_installer.bin_paths(context.target())))
+        let bin_paths = join_futures!(self.contexts.iter().map(|context| {
+            let bin_path_installer = self.bin_path_installer.clone();
+            let target = context.target().clone();
+            async move { bin_path_installer.bin_paths(target).await }
+        }))
         .await
         .map_err(InstallServiceError::MultiInstall)?;
         Ok(bin_paths.into_iter().flatten().collect())
     }
     async fn install_bin_path(&self) -> Result<()> {
-        join_futures!(self
-            .contexts
-            .iter()
-            .map(|context| self.bin_path_installer.install_bin_path(context.target())))
+        join_futures!(self.contexts.iter().map(|context| {
+            let bin_path_installer = self.bin_path_installer.clone();
+            let target = context.target().clone();
+            async move { bin_path_installer.install_bin_path(target).await }
+        }))
         .await
         .map_err(InstallServiceError::MultiInstall)?;
         Ok(())

@@ -31,12 +31,13 @@ pub mod test_util {
 }
 #[macro_export]
 macro_rules! join_futures {
-    ($futures:expr) => {
+    ($futures:expr) => {{
+        let futures = $futures.map(|f| tokio::spawn(f)).collect::<Vec<_>>();
         async {
             let mut targets = vec![];
             let mut errs = vec![];
-            for future in $futures {
-                let result = future.await;
+            for future in futures.into_iter() {
+                let result = future.await.unwrap();
                 match result {
                     Ok(target) => targets.push(target),
                     Err(err) => errs.push(err),
@@ -48,5 +49,5 @@ macro_rules! join_futures {
                 Err(errs)
             }
         }
-    };
+    }};
 }

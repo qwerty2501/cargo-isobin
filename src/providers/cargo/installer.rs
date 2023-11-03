@@ -43,7 +43,7 @@ impl InstallerFactory for CargoInstallerFactory {
     }
 }
 
-#[derive(new)]
+#[derive(new, Clone)]
 pub struct CargoCoreInstaller {
     cargo_workspace: CargoWorkspace,
 }
@@ -158,7 +158,7 @@ impl providers::CoreInstaller for CargoCoreInstaller {
     }
 }
 
-#[derive(new, Getters)]
+#[derive(new, Getters, Clone)]
 pub struct CargoInstallTarget {
     name: String,
     install_dependency: CargoInstallDependency,
@@ -173,7 +173,7 @@ impl providers::InstallTarget for CargoInstallTarget {
         &self.name
     }
 }
-
+#[derive(Clone)]
 pub struct CargoBinPathInstaller {
     cargo_workspace: CargoWorkspace,
     workspace: Workspace,
@@ -198,11 +198,11 @@ impl CargoBinPathInstaller {
 impl BinPathInstaller for CargoBinPathInstaller {
     type InstallTarget = CargoInstallTarget;
 
-    async fn bin_paths(&self, target: &Self::InstallTarget) -> Result<Vec<PathBuf>> {
-        enumerate_executable_files(self.bin_dir(target)).await
+    async fn bin_paths(&self, target: Self::InstallTarget) -> Result<Vec<PathBuf>> {
+        enumerate_executable_files(self.bin_dir(&target)).await
     }
-    async fn install_bin_path(&self, target: &Self::InstallTarget) -> Result<()> {
-        let cargo_bin_dir = self.bin_dir(target);
+    async fn install_bin_path(&self, target: Self::InstallTarget) -> Result<()> {
+        let cargo_bin_dir = self.bin_dir(&target);
         make_hard_links_in_dir(cargo_bin_dir, self.workspace.bin_dir()).await?;
         Ok(())
     }

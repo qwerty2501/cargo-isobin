@@ -11,7 +11,7 @@ pub trait InstallerFactory: 'static + Send + Sync {
 }
 
 #[async_trait]
-pub trait CoreInstaller: 'static + Send + Sync {
+pub trait CoreInstaller: 'static + Send + Sync + Clone {
     type InstallTarget: InstallTarget;
     fn provider_kind(&self) -> providers::ProviderKind;
     fn multi_install_mode(&self) -> MultiInstallMode;
@@ -23,14 +23,14 @@ pub enum MultiInstallMode {
     Sequential,
 }
 
-pub trait InstallTarget: 'static + Send + Sync {
+pub trait InstallTarget: 'static + Send + Sync + Clone {
     fn provider_kind(&self) -> ProviderKind;
     fn name(&self) -> &str;
 }
 
 #[async_trait]
-pub trait BinPathInstaller: 'static + Send + Sync {
+pub trait BinPathInstaller: 'static + Send + Sync + Clone {
     type InstallTarget: InstallTarget;
-    async fn bin_paths(&self, target: &Self::InstallTarget) -> Result<Vec<PathBuf>>;
-    async fn install_bin_path(&self, target: &Self::InstallTarget) -> Result<()>;
+    async fn bin_paths(&self, target: Self::InstallTarget) -> Result<Vec<PathBuf>>;
+    async fn install_bin_path(&self, target: Self::InstallTarget) -> Result<()>;
 }
