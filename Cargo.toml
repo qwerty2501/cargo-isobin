@@ -9,6 +9,7 @@ edition = "2021"
 anyhow = "1.0.75"
 async-trait = "0.1.73"
 clap = { version = "3.2.25", features = ["derive"] }
+colored = "2.0.4"
 derive-getters = "0.2.1"
 derive-new = "0.5.9"
 directories = "4.0.1"

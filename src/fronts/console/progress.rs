@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::{
@@ -43,7 +44,7 @@ impl Progress {
         self.progress_bar.disable_steady_tick();
         self.progress_bar
             .set_style(ProgressStyle::with_template("  {prefix} {msg}")?);
-        self.progress_bar.set_message("done");
+        self.progress_bar.set_message("done".green().to_string());
         self.progress_bar.finish();
         Ok(())
     }
@@ -52,8 +53,7 @@ impl Progress {
         self.progress_bar.disable_steady_tick();
         self.progress_bar
             .set_style(ProgressStyle::with_template("  {prefix} {msg}")?);
-        self.progress_bar
-            .set_message(format!("{}/{} failed", self.provider_kind, self.name));
+        self.progress_bar.set_message("failed".red().to_string());
         self.progress_bar.finish();
         Ok(())
     }
