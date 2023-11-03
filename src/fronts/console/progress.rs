@@ -22,28 +22,39 @@ impl Progress {
             name: install_target.name().into(),
         }
     }
+
+    pub fn prepare(&self) -> Result<()> {
+        self.progress_bar
+            .set_style(ProgressStyle::with_template("{spinner} {prefix} {msg}")?);
+        self.progress_bar
+            .set_prefix(format!("{}/{}", self.provider_kind, self.name));
+        self.progress_bar.set_message("waiting");
+        Ok(())
+    }
+
     pub fn start(&self) -> Result<()> {
         self.progress_bar
-            .set_style(ProgressStyle::with_template("{spinner} {msg}")?);
-        self.progress_bar
             .enable_steady_tick(Duration::from_millis(100));
-        self.progress_bar
-            .set_message(format!("{}/{} installing", self.provider_kind, self.name));
+        self.progress_bar.set_message("installing");
         Ok(())
     }
 
     pub fn done(&self) -> Result<()> {
+        self.progress_bar.disable_steady_tick();
         self.progress_bar
-            .set_style(ProgressStyle::with_template("{msg.green}")?);
-        self.progress_bar
-            .set_message(format!("{}/{} done", self.provider_kind, self.name));
+            .set_style(ProgressStyle::with_template("  {prefix} {msg}")?);
+        self.progress_bar.set_message("done");
+        self.progress_bar.finish();
         Ok(())
     }
+
     pub fn failed(&self) -> Result<()> {
+        self.progress_bar.disable_steady_tick();
         self.progress_bar
-            .set_style(ProgressStyle::with_template("{msg.red}")?);
+            .set_style(ProgressStyle::with_template("  {prefix} {msg}")?);
         self.progress_bar
             .set_message(format!("{}/{} failed", self.provider_kind, self.name));
+        self.progress_bar.finish();
         Ok(())
     }
 }
