@@ -19,7 +19,7 @@ pub enum CargoInstallDependency {
 #[derive(Debug, Clone, PartialEq, Default, Serialize, new, Deserialize, Getters)]
 pub struct CargoInstallDependencyDetail {
     bins: Option<Vec<String>>,
-    version: String,
+    version: Option<String>,
     registry: Option<String>,
     index: Option<String>,
     path: Option<String>,
@@ -37,7 +37,7 @@ pub struct CargoInstallDependencyDetail {
 impl CargoInstallDependencyDetail {
     pub fn from_version(version: impl Into<String>) -> Self {
         Self {
-            version: version.into(),
+            version: Some(version.into()),
             ..Default::default()
         }
     }

@@ -188,7 +188,7 @@ mod tests {
         let mut cargos = vec![];
         let comrak_dependency_detail = CargoInstallDependencyDetail::new(
             Default::default(),
-            "1.0".into(),
+            Some("1.0".into()),
             Default::default(),
             Default::default(),
             Default::default(),
@@ -207,7 +207,7 @@ mod tests {
 
         let cargo_make_dependency_detail = CargoInstallDependencyDetail::new(
             Default::default(),
-            "2.0".into(),
+            Some("2.0".into()),
             Default::default(),
             Default::default(),
             Default::default(),

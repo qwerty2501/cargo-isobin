@@ -50,7 +50,10 @@ pub struct CargoCoreInstaller {
 
 impl CargoCoreInstaller {
     fn dependency_to_args(dependency: &CargoInstallDependencyDetail) -> Vec<String> {
-        let mut args: Vec<String> = vec!["--version".into(), dependency.version().into()];
+        let mut args: Vec<String> = vec![];
+        if let Some(version) = dependency.version() {
+            args.extend_from_slice(&["--version".into(), version.into()]);
+        }
         if let Some(registry) = dependency.registry() {
             args.extend_from_slice(&["--registry".into(), registry.into()]);
         }
