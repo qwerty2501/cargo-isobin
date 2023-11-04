@@ -17,6 +17,7 @@ async fn main() {
 #[derive(Default)]
 pub struct Application {
     install_service: InstallService,
+    path_service: PathService,
 }
 
 impl Application {
@@ -34,6 +35,7 @@ impl Application {
             SubCommands::Install { install_targets } => {
                 self.run_install(service_option, install_targets).await
             }
+            SubCommands::Path => self.run_path(service_option).await,
         }
     }
     async fn run_install(
@@ -57,6 +59,11 @@ impl Application {
         eprintln!("Completed instllation.");
         Ok(())
     }
+    async fn run_path(&self, service_option: ServiceOption) -> Result<()> {
+        let path = self.path_service.path(&service_option).await?;
+        println!("{}", path.display());
+        Ok(())
+    }
 }
 
 #[derive(Parser)]
@@ -72,4 +79,5 @@ pub struct Arguments {
 #[derive(Subcommand)]
 pub enum SubCommands {
     Install { install_targets: Vec<String> },
+    Path,
 }
