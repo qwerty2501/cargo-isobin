@@ -8,8 +8,6 @@ async fn main() {
 
     let args = Arguments::parse();
     let result = app.run(args).await;
-    eprintln!();
-    eprintln!();
     match result {
         Ok(()) => {}
         Err(err) => print_error(&err),
@@ -34,6 +32,7 @@ impl Application {
         let subcommand = args.subcommand;
         match subcommand {
             SubCommands::Install { install_targets } => {
+                eprintln!("Start instllation.");
                 let install_service_option = InstallServiceOptionBuilder::new()
                     .mode(if install_targets.is_empty() {
                         InstallMode::All
@@ -46,6 +45,7 @@ impl Application {
                 self.install_service
                     .install(&service_option, &install_service_option)
                     .await?;
+                eprintln!("Completed instllation.");
                 Ok(())
             }
         }
