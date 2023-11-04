@@ -1,13 +1,19 @@
 use clap::{Parser, Subcommand};
-use isobin::*;
+use isobin::{fronts::print_error, *};
 use std::path::PathBuf;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() {
     let app = Application::default();
 
     let args = Arguments::parse();
-    app.run(args).await
+    let result = app.run(args).await;
+    eprintln!();
+    eprintln!();
+    match result {
+        Ok(()) => {}
+        Err(err) => print_error(&err),
+    }
 }
 
 #[derive(Default)]
