@@ -32,25 +32,33 @@ impl Application {
         let subcommand = args.subcommand;
         match subcommand {
             SubCommands::Install { install_targets } => {
-                eprintln!("Start instllation.");
-                let install_service_option = InstallServiceOptionBuilder::new()
-                    .mode(if install_targets.is_empty() {
-                        InstallMode::All
-                    } else {
-                        InstallMode::SpecificInstallTargetsOnly {
-                            specific_install_targets: install_targets,
-                        }
-                    })
-                    .build();
-                self.install_service
-                    .install(&service_option, &install_service_option)
-                    .await?;
-                eprintln!("Completed instllation.");
-                Ok(())
+                self.run_install(service_option, install_targets).await
             }
         }
     }
+    async fn run_install(
+        &self,
+        service_option: ServiceOption,
+        install_targets: Vec<String>,
+    ) -> Result<()> {
+        eprintln!("Start instllation.");
+        let install_service_option = InstallServiceOptionBuilder::new()
+            .mode(if install_targets.is_empty() {
+                InstallMode::All
+            } else {
+                InstallMode::SpecificInstallTargetsOnly {
+                    specific_install_targets: install_targets,
+                }
+            })
+            .build();
+        self.install_service
+            .install(&service_option, &install_service_option)
+            .await?;
+        eprintln!("Completed instllation.");
+        Ok(())
+    }
 }
+
 #[derive(Parser)]
 #[clap(author, version, about)]
 pub struct Arguments {
