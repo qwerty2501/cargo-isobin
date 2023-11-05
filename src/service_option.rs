@@ -1,5 +1,7 @@
+use tokio::fs;
+
 use super::*;
-use crate::paths::isobin_config::search_isobin_config_path;
+use crate::paths::isobin_config::{search_isobin_config_path, IsobinConfigPathError};
 use crate::IsobinConfig;
 use std::path::{Path, PathBuf};
 
@@ -7,6 +9,14 @@ use std::path::{Path, PathBuf};
 pub struct ServiceOption {
     isobin_config_path: PathBuf,
     isobin_config: IsobinConfig,
+}
+
+impl ServiceOption {
+    pub fn isobin_config_dir(&self) -> Result<&Path> {
+        self.isobin_config_path
+            .parent()
+            .ok_or(IsobinConfigPathError::NotFoundIsobinConfig.into())
+    }
 }
 
 #[derive(Default)]
@@ -28,6 +38,7 @@ impl ServiceOptionBuilder {
             let current_dir = std::env::current_dir().unwrap();
             search_isobin_config_path(current_dir).await?
         };
+        let isobin_config_path = fs::canonicalize(isobin_config_path).await?;
         let isobin_config = IsobinConfig::parse_from_file(&isobin_config_path).await?;
         Ok(ServiceOption {
             isobin_config_path,

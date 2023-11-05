@@ -4,7 +4,6 @@ use tokio::sync::Mutex;
 
 use crate::fronts::MultiProgress;
 use crate::fronts::Progress;
-use crate::paths::isobin_config::IsobinConfigPathError;
 use crate::paths::workspace::Workspace;
 use crate::paths::workspace::WorkspaceProvider;
 use crate::providers::cargo::CargoConfig;
@@ -51,14 +50,10 @@ impl InstallService {
         install_service_option: InstallServiceOption,
     ) -> Result<()> {
         let isobin_config = service_option.isobin_config();
-        let isobin_config_dir = service_option
-            .isobin_config_path()
-            .parent()
-            .ok_or(IsobinConfigPathError::NotFoundIsobinConfig)?;
-        let isobin_config_dir = fs::canonicalize(isobin_config_dir).await?;
+        let isobin_config_dir = service_option.isobin_config_dir()?;
         let workspace = self
             .workspace_provider
-            .base_unique_workspace_dir_from_isobin_config_dir(&isobin_config_dir)
+            .base_unique_workspace_dir_from_isobin_config_dir(isobin_config_dir)
             .await?;
         let tmp_workspace = Workspace::new(
             workspace.id().clone(),
