@@ -61,7 +61,7 @@ impl CargoCoreInstaller {
             args.extend_from_slice(&["--index".into(), index.into()]);
         }
         if let Some(path) = dependency.path() {
-            args.extend_from_slice(&["--path".into(), path.into()]);
+            args.extend_from_slice(&["--path".into(), path.to_string_lossy().into()]);
         }
         if let Some(git) = dependency.git() {
             args.extend_from_slice(&["--git".into(), git.into()]);

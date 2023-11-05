@@ -1,14 +1,17 @@
 use super::*;
-use crate::utils::{
-    io_ext,
-    serde_ext::{Json, Toml, Yaml},
+use crate::{
+    providers::ProviderKind,
+    utils::{
+        io_ext,
+        serde_ext::{Json, Toml, Yaml},
+    },
 };
 use std::path::Path;
 
 use providers::cargo::CargoConfig;
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Getters)]
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Getters)]
 pub struct IsobinConfig {
     #[serde(default)]
     cargo: CargoConfig,
@@ -21,6 +24,15 @@ pub enum IsobinConfigError {
 
     #[error("The target file has unknown extension\npath:{path}\nextension:{extension}")]
     UnknownFileExtension { path: String, extension: String },
+
+    #[error("{provider}/{name}\n{error}")]
+    Validate {
+        provider: ProviderKind,
+        name: String,
+        error: Error,
+    },
+    #[error("{0:#?}")]
+    MultiValidate(Vec<Error>),
 }
 
 impl IsobinConfig {
@@ -54,6 +66,12 @@ impl IsobinConfig {
             .into()),
         }
     }
+    pub fn validate(&self) -> Result<()> {
+        self.cargo.validate()
+    }
+    pub fn fix(&mut self, isobin_config_dir: &Path) {
+        self.cargo.fix(isobin_config_dir)
+    }
 
     async fn parse(
         file_extension: ConfigFileExtensions,
@@ -82,6 +100,7 @@ mod tests {
     use anyhow::anyhow;
     use providers::cargo::{CargoInstallDependency, CargoInstallDependencyDetail};
 
+    use semver::Version;
     use utils::serde_ext::{ErrorHint, SerdeExtError};
 
     #[rstest]
@@ -165,8 +184,14 @@ mod tests {
     #[fixture]
     fn cargo_install_dependencies() -> Vec<(String, CargoInstallDependency)> {
         [
-            ("comrak", CargoInstallDependency::Simple("1.0".into())),
-            ("cargo-make", CargoInstallDependency::Simple("2.0".into())),
+            (
+                "comrak",
+                CargoInstallDependency::Simple(Version::parse("1.0.0").unwrap()),
+            ),
+            (
+                "cargo-make",
+                CargoInstallDependency::Simple(Version::parse("2.0.0").unwrap()),
+            ),
         ]
         .into_iter()
         .map(|(name, v)| (name.to_string(), v))
@@ -188,7 +213,7 @@ mod tests {
         let mut cargos = vec![];
         let comrak_dependency_detail = CargoInstallDependencyDetail::new(
             Default::default(),
-            Some("1.0".into()),
+            Some(Version::parse("1.0.0").unwrap()),
             Default::default(),
             Default::default(),
             Default::default(),
@@ -207,7 +232,7 @@ mod tests {
 
         let cargo_make_dependency_detail = CargoInstallDependencyDetail::new(
             Default::default(),
-            Some("2.0".into()),
+            Some(Version::parse("2.0.0").unwrap()),
             Default::default(),
             Default::default(),
             Default::default(),
