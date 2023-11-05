@@ -18,7 +18,7 @@ impl Default for PathService {
 
 impl PathService {
     pub async fn path(&self, service_option: ServiceOption) -> Result<PathBuf> {
-        let isobin_config_dir = service_option.isobin_config_dir()?;
+        let isobin_config_dir = service_option.isobin_config_dir();
         let workspace = self
             .workspace_provider
             .base_unique_workspace_dir_from_isobin_config_dir(isobin_config_dir)

@@ -8,15 +8,8 @@ use std::path::{Path, PathBuf};
 #[derive(Getters)]
 pub struct ServiceOption {
     isobin_config_path: PathBuf,
+    isobin_config_dir: PathBuf,
     isobin_config: IsobinConfig,
-}
-
-impl ServiceOption {
-    pub fn isobin_config_dir(&self) -> Result<&Path> {
-        self.isobin_config_path
-            .parent()
-            .ok_or(IsobinConfigPathError::NotFoundIsobinConfig.into())
-    }
 }
 
 #[derive(Default)]
@@ -39,10 +32,16 @@ impl ServiceOptionBuilder {
             search_isobin_config_path(current_dir).await?
         };
         let isobin_config_path = fs::canonicalize(isobin_config_path).await?;
-        let isobin_config = IsobinConfig::parse_from_file(&isobin_config_path).await?;
+        let mut isobin_config = IsobinConfig::parse_from_file(&isobin_config_path).await?;
+        let isobin_config_dir = isobin_config_path
+            .parent()
+            .ok_or(IsobinConfigPathError::NotFoundIsobinConfig)?;
+        isobin_config.fix(isobin_config_dir);
+        isobin_config.validate()?;
         Ok(ServiceOption {
-            isobin_config_path,
+            isobin_config_path: isobin_config_path.clone(),
             isobin_config,
+            isobin_config_dir: isobin_config_dir.into(),
         })
     }
 }

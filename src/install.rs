@@ -49,10 +49,8 @@ impl InstallService {
         service_option: ServiceOption,
         install_service_option: InstallServiceOption,
     ) -> Result<()> {
-        let mut isobin_config = service_option.isobin_config().clone();
-        let isobin_config_dir = service_option.isobin_config_dir()?;
-        isobin_config.fix(isobin_config_dir);
-        isobin_config.validate()?;
+        let isobin_config = service_option.isobin_config().clone();
+        let isobin_config_dir = service_option.isobin_config_dir();
         let workspace = self
             .workspace_provider
             .base_unique_workspace_dir_from_isobin_config_dir(isobin_config_dir)
