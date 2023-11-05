@@ -52,7 +52,7 @@ impl CargoCoreInstaller {
     fn dependency_to_args(dependency: &CargoInstallDependencyDetail) -> Vec<String> {
         let mut args: Vec<String> = vec![];
         if let Some(version) = dependency.version() {
-            args.extend_from_slice(&["--version".into(), version.into()]);
+            args.extend_from_slice(&["--version".into(), version.to_string()]);
         }
         if let Some(registry) = dependency.registry() {
             args.extend_from_slice(&["--registry".into(), registry.into()]);
@@ -114,9 +114,9 @@ impl providers::CoreInstaller for CargoCoreInstaller {
             install_dir.to_string_lossy().into(),
         ];
         let dependency_args = match target.install_dependency() {
-            CargoInstallDependency::Simple(version) => {
-                Self::dependency_to_args(&CargoInstallDependencyDetail::from_version(version))
-            }
+            CargoInstallDependency::Simple(version) => Self::dependency_to_args(
+                &CargoInstallDependencyDetail::from_version(version.clone()),
+            ),
             CargoInstallDependency::Detailed(dependency) => Self::dependency_to_args(dependency),
         };
         args.extend_from_slice(&dependency_args);

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use semver::Version;
 use serde_derive::{Deserialize, Serialize};
 #[derive(Deserialize, Serialize, Debug, PartialEq, new, Default, Getters)]
 pub struct CargoConfig {
@@ -11,7 +12,7 @@ pub struct CargoConfig {
 #[serde(untagged)]
 #[allow(clippy::large_enum_variant)]
 pub enum CargoInstallDependency {
-    Simple(String),
+    Simple(Version),
     Detailed(CargoInstallDependencyDetail),
 }
 
@@ -19,7 +20,7 @@ pub enum CargoInstallDependency {
 #[derive(Debug, Clone, PartialEq, Default, Serialize, new, Deserialize, Getters)]
 pub struct CargoInstallDependencyDetail {
     bins: Option<Vec<String>>,
-    version: Option<String>,
+    version: Option<Version>,
     registry: Option<String>,
     index: Option<String>,
     path: Option<String>,
@@ -35,7 +36,7 @@ pub struct CargoInstallDependencyDetail {
 }
 
 impl CargoInstallDependencyDetail {
-    pub fn from_version(version: impl Into<String>) -> Self {
+    pub fn from_version(version: impl Into<Version>) -> Self {
         Self {
             version: Some(version.into()),
             ..Default::default()

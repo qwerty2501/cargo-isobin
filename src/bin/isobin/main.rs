@@ -46,7 +46,7 @@ impl Application {
         service_option: ServiceOption,
         install_targets: Vec<String>,
     ) -> Result<()> {
-        eprintln!("Start instllation.");
+        eprintln!("Start instllations.");
         let install_service_option = InstallServiceOptionBuilder::default()
             .mode(if install_targets.is_empty() {
                 InstallMode::All
@@ -59,7 +59,7 @@ impl Application {
         self.install_service
             .install(service_option, install_service_option)
             .await?;
-        eprintln!("Completed instllation.");
+        eprintln!("Completed instllations.");
         Ok(())
     }
     async fn run_path(&self, service_option: ServiceOption) -> Result<()> {
