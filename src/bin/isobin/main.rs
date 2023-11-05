@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use isobin::{fronts::print_error, *};
-use std::path::PathBuf;
+use std::{path::PathBuf, process::exit};
 
 #[tokio::main]
 async fn main() {
@@ -10,7 +10,10 @@ async fn main() {
     let result = app.run(args).await;
     match result {
         Ok(()) => {}
-        Err(err) => print_error(&err),
+        Err(err) => {
+            print_error(&err);
+            exit(1);
+        }
     }
 }
 
