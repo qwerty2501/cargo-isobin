@@ -25,7 +25,7 @@ pub struct Application {
 
 impl Application {
     pub async fn run(&self, args: Arguments) -> Result<()> {
-        let service_option_builder = ServiceOptionBuilder::new();
+        let service_option_builder = ServiceOptionBuilder::default();
         let service_option_builder = if let Some(isobin_config_path) = args.isobin_config_path {
             service_option_builder.isobin_config_path(isobin_config_path)
         } else {
@@ -47,7 +47,7 @@ impl Application {
         install_targets: Vec<String>,
     ) -> Result<()> {
         eprintln!("Start instllation.");
-        let install_service_option = InstallServiceOptionBuilder::new()
+        let install_service_option = InstallServiceOptionBuilder::default()
             .mode(if install_targets.is_empty() {
                 InstallMode::All
             } else {
@@ -57,13 +57,13 @@ impl Application {
             })
             .build();
         self.install_service
-            .install(&service_option, &install_service_option)
+            .install(service_option, install_service_option)
             .await?;
         eprintln!("Completed instllation.");
         Ok(())
     }
     async fn run_path(&self, service_option: ServiceOption) -> Result<()> {
-        let path = self.path_service.path(&service_option).await?;
+        let path = self.path_service.path(service_option).await?;
         println!("{}", path.display());
         Ok(())
     }

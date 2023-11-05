@@ -9,17 +9,12 @@ pub struct ServiceOption {
     isobin_config: IsobinConfig,
 }
 
+#[derive(Default)]
 pub struct ServiceOptionBuilder {
     isobin_config_path: Option<PathBuf>,
 }
 
 impl ServiceOptionBuilder {
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        Self {
-            isobin_config_path: None,
-        }
-    }
     pub fn isobin_config_path(self, isobin_config_path: impl AsRef<Path>) -> Self {
         Self {
             isobin_config_path: Some(isobin_config_path.as_ref().into()),

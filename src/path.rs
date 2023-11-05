@@ -20,7 +20,7 @@ impl Default for PathService {
 }
 
 impl PathService {
-    pub async fn path(&self, service_option: &ServiceOption) -> Result<PathBuf> {
+    pub async fn path(&self, service_option: ServiceOption) -> Result<PathBuf> {
         let isobin_config_dir = service_option
             .isobin_config_path()
             .parent()

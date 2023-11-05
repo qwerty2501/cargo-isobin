@@ -47,8 +47,8 @@ impl InstallService {
     #[allow(unused_variables)]
     pub async fn install(
         &self,
-        service_option: &ServiceOption,
-        install_service_option: &InstallServiceOption,
+        service_option: ServiceOption,
+        install_service_option: InstallServiceOption,
     ) -> Result<()> {
         let isobin_config = service_option.isobin_config();
         let isobin_config_dir = service_option
@@ -284,15 +284,12 @@ pub struct InstallServiceOption {
     mode: InstallMode,
 }
 
+#[derive(Default)]
 pub struct InstallServiceOptionBuilder {
     mode: Option<InstallMode>,
 }
 
 impl InstallServiceOptionBuilder {
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        Self { mode: None }
-    }
     pub fn mode(self, mode: InstallMode) -> Self {
         InstallServiceOptionBuilder { mode: Some(mode) }
     }
