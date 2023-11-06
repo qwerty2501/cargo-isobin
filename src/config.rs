@@ -1,5 +1,6 @@
 use super::*;
 use crate::{
+    paths::isobin_config::IsobinConfigPathError,
     providers::ProviderKind,
     utils::{
         io_ext,
@@ -39,7 +40,15 @@ impl IsobinConfig {
     #[allow(dead_code)]
     pub async fn parse_from_file(path: impl AsRef<Path>) -> Result<IsobinConfig> {
         let file_extension = Self::get_file_extension(path.as_ref())?;
-        Self::parse(file_extension, path).await
+        let mut isobin_config = Self::parse(file_extension, path.as_ref()).await?;
+        let isobin_config_dir = path
+            .as_ref()
+            .parent()
+            .ok_or_else(IsobinConfigPathError::new_not_found_isobin_config)?;
+
+        isobin_config.fix(isobin_config_dir);
+        isobin_config.validate()?;
+        Ok(isobin_config)
     }
 
     fn get_file_extension(path: impl AsRef<Path>) -> Result<ConfigFileExtensions> {

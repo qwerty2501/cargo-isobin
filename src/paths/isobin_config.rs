@@ -2,6 +2,13 @@ use super::*;
 use std::cmp::Ordering;
 use std::path::{Path, PathBuf};
 
+pub fn isobin_config_dir(isobin_confing_path: &Path) -> Result<&Path> {
+    let isobin_config_dir = isobin_confing_path
+        .parent()
+        .ok_or_else(IsobinConfigPathError::new_not_found_isobin_config)?;
+    Ok(isobin_config_dir)
+}
+
 pub async fn search_isobin_config_path(current_dir: impl AsRef<Path>) -> Result<PathBuf> {
     let mut current_dir = current_dir.as_ref();
     // TODO: Currently, rust can not call recursively async function.

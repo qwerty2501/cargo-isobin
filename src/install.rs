@@ -4,7 +4,9 @@ use tokio::sync::Mutex;
 
 use crate::fronts::MultiProgress;
 use crate::fronts::Progress;
+use crate::paths::isobin_config::isobin_config_dir;
 use crate::paths::workspace::Workspace;
+use crate::paths::workspace::WorkspaceProvider;
 use crate::providers::cargo::CargoConfig;
 use crate::providers::cargo::CargoInstallTarget;
 use crate::providers::cargo::CargoInstallerFactory;
@@ -25,7 +27,9 @@ pub enum InstallMode {
 }
 
 #[derive(Default)]
-pub struct InstallService {}
+pub struct InstallService {
+    workspace_provider: WorkspaceProvider,
+}
 
 impl InstallService {
     #[allow(unused_variables)]
@@ -34,9 +38,13 @@ impl InstallService {
         service_option: ServiceOption,
         install_service_option: InstallServiceOption,
     ) -> Result<()> {
-        let isobin_config = service_option.isobin_config().clone();
-        let isobin_config_dir = service_option.isobin_config_dir();
-        let workspace = service_option.workspace();
+        let isobin_config =
+            IsobinConfig::parse_from_file(service_option.isobin_config_path()).await?;
+        let isobin_config_dir = isobin_config_dir(service_option.isobin_config_path())?;
+        let workspace = self
+            .workspace_provider
+            .base_unique_workspace_dir_from_isobin_config_dir(isobin_config_dir)
+            .await?;
         let tmp_workspace = Workspace::new(
             workspace.id().clone(),
             workspace.cache_dir().join(nanoid!()),
@@ -48,7 +56,7 @@ impl InstallService {
         let cargo_runner = install_runner_provider
             .make_cargo_runner(&cargo_installer_factory, isobin_config.cargo())
             .await?;
-        self.run_each_installs(workspace, &tmp_workspace, vec![cargo_runner])
+        self.run_each_installs(&workspace, &tmp_workspace, vec![cargo_runner])
             .await
     }
 
