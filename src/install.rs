@@ -5,12 +5,11 @@ use tokio::sync::Mutex;
 use crate::fronts::MultiProgress;
 use crate::fronts::Progress;
 use crate::paths::workspace::Workspace;
-use crate::paths::workspace::WorkspaceProvider;
 use crate::providers::cargo::CargoConfig;
 use crate::providers::cargo::CargoInstallTarget;
+use crate::providers::cargo::CargoInstallerFactory;
 use crate::providers::InstallTarget;
 use crate::utils::fs_ext;
-use crate::{paths::project::Project, providers::cargo::CargoInstallerFactory};
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -25,22 +24,8 @@ pub enum InstallMode {
     },
 }
 
-#[derive(new)]
-pub struct InstallService {
-    #[allow(dead_code)]
-    project: Project,
-    workspace_provider: WorkspaceProvider,
-}
-
-impl Default for InstallService {
-    fn default() -> Self {
-        let project = Project::default();
-        Self {
-            workspace_provider: WorkspaceProvider::new(project.clone()),
-            project,
-        }
-    }
-}
+#[derive(Default)]
+pub struct InstallService {}
 
 impl InstallService {
     #[allow(unused_variables)]
@@ -51,10 +36,7 @@ impl InstallService {
     ) -> Result<()> {
         let isobin_config = service_option.isobin_config().clone();
         let isobin_config_dir = service_option.isobin_config_dir();
-        let workspace = self
-            .workspace_provider
-            .base_unique_workspace_dir_from_isobin_config_dir(isobin_config_dir)
-            .await?;
+        let workspace = service_option.workspace();
         let tmp_workspace = Workspace::new(
             workspace.id().clone(),
             workspace.cache_dir().join(nanoid!()),
@@ -66,7 +48,7 @@ impl InstallService {
         let cargo_runner = install_runner_provider
             .make_cargo_runner(&cargo_installer_factory, isobin_config.cargo())
             .await?;
-        self.run_each_installs(&workspace, &tmp_workspace, vec![cargo_runner])
+        self.run_each_installs(workspace, &tmp_workspace, vec![cargo_runner])
             .await
     }
 

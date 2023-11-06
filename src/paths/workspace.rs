@@ -36,6 +36,14 @@ pub struct WorkspaceProvider {
     project: Project,
 }
 
+impl Default for WorkspaceProvider {
+    fn default() -> Self {
+        Self {
+            project: Project::default(),
+        }
+    }
+}
+
 impl WorkspaceProvider {
     #[allow(dead_code)]
     pub async fn base_unique_workspace_dir_from_isobin_config_dir(
