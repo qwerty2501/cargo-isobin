@@ -35,8 +35,12 @@ impl Application {
 
         let subcommand = args.subcommand;
         match subcommand {
-            SubCommands::Install { install_targets } => {
-                self.run_install(service_option, install_targets).await
+            SubCommands::Install {
+                force,
+                install_targets,
+            } => {
+                self.run_install(service_option, force, install_targets)
+                    .await
             }
             SubCommands::Path => self.run_path(service_option).await,
         }
@@ -44,6 +48,7 @@ impl Application {
     async fn run_install(
         &self,
         service_option: ServiceOption,
+        force: bool,
         install_targets: Vec<String>,
     ) -> Result<()> {
         eprintln!("Start instllations.");
@@ -55,6 +60,7 @@ impl Application {
                     specific_install_targets: install_targets,
                 }
             })
+            .force(force)
             .build();
         self.install_service
             .install(service_option, install_service_option)
@@ -70,17 +76,21 @@ impl Application {
 }
 
 #[derive(Parser)]
-#[clap(author, version, about)]
+#[command(author, version, about)]
 pub struct Arguments {
     /// Sets a custom config file
-    #[clap(short, long, parse(from_os_str), value_name = "FILE", name = "config")]
+    #[arg(short, long, value_name = "FILE", name = "config")]
     isobin_config_path: Option<PathBuf>,
-    #[clap(subcommand)]
+    #[command(subcommand)]
     subcommand: SubCommands,
 }
 
 #[derive(Subcommand)]
 pub enum SubCommands {
-    Install { install_targets: Vec<String> },
+    Install {
+        #[arg(short, long)]
+        force: bool,
+        install_targets: Vec<String>,
+    },
     Path,
 }

@@ -6,12 +6,77 @@ use std::{
 use anyhow::anyhow;
 use semver::Version;
 use serde_derive::{Deserialize, Serialize};
+use tokio::fs;
 
-use crate::{providers::ProviderKind, IsobinConfigError, Result};
+use crate::{
+    paths::workspace::Workspace,
+    providers::ProviderKind,
+    utils::file_modified::{has_file_diff_in_dir, FILE_MODIFIED_CACHE_MAP_FILE_NAME},
+    IsobinConfigError, Result,
+};
+
+use super::home::CargoWorkspace;
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, new, Default, Getters)]
 pub struct CargoConfig {
     #[serde(serialize_with = "toml::ser::tables_last")]
     installs: HashMap<String, CargoInstallDependency>,
+}
+
+impl CargoConfig {
+    pub async fn get_need_install_config(
+        base: &Self,
+        old: &Self,
+        workspace: &Workspace,
+    ) -> Result<Self> {
+        let mut new_cargo_config = Self::default();
+        let cargo_workspace = CargoWorkspace::from_workspace(workspace);
+        for (name, dependency) in base.installs().iter() {
+            if let Some(old_dependency) = old.installs().get(name) {
+                if dependency != old_dependency
+                    || Self::check_need_build_in_path(name, dependency, &cargo_workspace).await?
+                {
+                    new_cargo_config
+                        .installs
+                        .insert(name.to_string(), dependency.clone());
+                }
+            } else {
+                new_cargo_config
+                    .installs
+                    .insert(name.to_string(), dependency.clone());
+            }
+        }
+        Ok(new_cargo_config)
+    }
+    async fn check_need_build_in_path(
+        name: &str,
+        dependency: &CargoInstallDependency,
+        cargo_workspace: &CargoWorkspace,
+    ) -> Result<bool> {
+        match dependency {
+            CargoInstallDependency::Simple(_) => Ok(false),
+            CargoInstallDependency::Detailed(dependency) => {
+                if let Some(path) = dependency.path() {
+                    let file_modified_cache_map_file_path = cargo_workspace
+                        .cargo_home_dir()
+                        .join(name)
+                        .join(FILE_MODIFIED_CACHE_MAP_FILE_NAME);
+                    let modified_cache_map_data =
+                        fs::read(file_modified_cache_map_file_path).await?;
+                    let modified_cache_map = serde_json::from_slice(&modified_cache_map_data)?;
+                    has_file_diff_in_dir(
+                        path,
+                        vec!["rs".into()],
+                        vec!["Cargo.toml".into(), "Cargo.lock".into()],
+                        vec![],
+                        modified_cache_map,
+                    )
+                    .await
+                } else {
+                    Ok(false)
+                }
+            }
+        }
+    }
 }
 
 impl CargoConfig {

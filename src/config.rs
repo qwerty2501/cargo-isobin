@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    paths::isobin_config::IsobinConfigPathError,
+    paths::{isobin_config::IsobinConfigPathError, workspace::Workspace},
     providers::ProviderKind,
     utils::{
         io_ext,
@@ -12,10 +12,23 @@ use std::path::Path;
 use providers::cargo::CargoConfig;
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Getters)]
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Getters, Default)]
 pub struct IsobinConfig {
     #[serde(default)]
     cargo: CargoConfig,
+}
+
+impl IsobinConfig {
+    pub async fn get_need_install_config(
+        base: &Self,
+        old: &Self,
+        workspace: &Workspace,
+    ) -> Result<Self> {
+        Ok(Self {
+            cargo: CargoConfig::get_need_install_config(base.cargo(), old.cargo(), workspace)
+                .await?,
+        })
+    }
 }
 
 #[derive(thiserror::Error, Debug, new)]

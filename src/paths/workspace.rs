@@ -32,16 +32,9 @@ impl Workspace {
     }
 }
 
+#[derive(Default)]
 pub struct WorkspaceProvider {
     project: Project,
-}
-
-impl Default for WorkspaceProvider {
-    fn default() -> Self {
-        Self {
-            project: Project::default(),
-        }
-    }
 }
 
 impl WorkspaceProvider {
@@ -89,7 +82,7 @@ struct WorkspacePathMap {
 }
 
 impl WorkspacePathMap {
-    const WORKSPACE_PATH_MAP_FILE_NAME: &'static str = "workspace_map.json";
+    const WORKSPACE_PATH_MAP_FILE_NAME: &'static str = "workspace_map.v1.json";
     async fn parse_from_config_dir(config_dir: impl AsRef<Path>) -> Result<WorkspacePathMap> {
         let workspace_path_map_file_path =
             config_dir.as_ref().join(Self::WORKSPACE_PATH_MAP_FILE_NAME);

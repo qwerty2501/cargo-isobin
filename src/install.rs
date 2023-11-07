@@ -1,5 +1,6 @@
 use nanoid::nanoid;
 use tokio::fs;
+use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 
 use crate::fronts::MultiProgress;
@@ -12,6 +13,7 @@ use crate::providers::cargo::CargoInstallTarget;
 use crate::providers::cargo::CargoInstallerFactory;
 use crate::providers::InstallTarget;
 use crate::utils::fs_ext;
+use crate::utils::fs_ext::copy_dir;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -32,6 +34,7 @@ pub struct InstallService {
 }
 
 impl InstallService {
+    const ISOBIN_CONFIG_FILE_CACHE_NAME: &str = "isobin_cache.v1.json";
     #[allow(unused_variables)]
     pub async fn install(
         &self,
@@ -50,11 +53,47 @@ impl InstallService {
             workspace.cache_dir().join(nanoid!()),
             workspace.cache_dir().clone(),
         );
+        let isobin_config_file_cache_path = tmp_workspace
+            .base_dir()
+            .join(Self::ISOBIN_CONFIG_FILE_CACHE_NAME);
+
+        let source_isobin_config = if !install_service_option.force {
+            if workspace.base_dir().exists() {
+                fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir()).await?;
+                copy_dir(
+                    workspace.base_dir().clone(),
+                    tmp_workspace.base_dir().clone(),
+                )
+                .await?;
+            }
+            if isobin_config_file_cache_path.exists() {
+                let cache = fs::read(&isobin_config_file_cache_path).await?;
+                let isobin_config_cache: IsobinConfig = serde_json::from_slice(&cache)?;
+                IsobinConfig::get_need_install_config(
+                    &isobin_config,
+                    &isobin_config_cache,
+                    &tmp_workspace,
+                )
+                .await?
+            } else {
+                isobin_config.clone()
+            }
+        } else {
+            isobin_config.clone()
+        };
+
+        let mut isobin_config_file_cache =
+            fs_ext::open_file_create_if_not_exists(isobin_config_file_cache_path).await?;
+        let sirialized_isobin_config = serde_json::to_vec(&isobin_config)?;
+        isobin_config_file_cache
+            .write_all(&sirialized_isobin_config)
+            .await?;
+
         fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir()).await?;
         let cargo_installer_factory = CargoInstallerFactory::new(tmp_workspace.clone());
         let install_runner_provider = InstallRunnerProvider::default();
         let cargo_runner = install_runner_provider
-            .make_cargo_runner(&cargo_installer_factory, isobin_config.cargo())
+            .make_cargo_runner(&cargo_installer_factory, source_isobin_config.cargo())
             .await?;
         self.run_each_installs(&workspace, &tmp_workspace, vec![cargo_runner])
             .await
@@ -97,6 +136,7 @@ impl InstallService {
                 .map(|r| async move { r.lock().await.install_bin_path().await }))
             .await
             .map_err(InstallServiceError::MultiInstall)?;
+
             let tmp_dir = workspace.cache_dir().join(nanoid!());
             let need_tmp = workspace.base_dir().exists();
             if need_tmp {
@@ -266,20 +306,28 @@ impl<
 
 #[derive(Getters)]
 pub struct InstallServiceOption {
+    force: bool,
     mode: InstallMode,
 }
 
 #[derive(Default)]
 pub struct InstallServiceOptionBuilder {
+    force: bool,
     mode: Option<InstallMode>,
 }
 
 impl InstallServiceOptionBuilder {
-    pub fn mode(self, mode: InstallMode) -> Self {
-        InstallServiceOptionBuilder { mode: Some(mode) }
+    pub fn mode(mut self, mode: InstallMode) -> Self {
+        self.mode = Some(mode);
+        self
+    }
+    pub fn force(mut self, force: bool) -> Self {
+        self.force = force;
+        self
     }
     pub fn build(self) -> InstallServiceOption {
         InstallServiceOption {
+            force: self.force,
             mode: self.mode.unwrap_or(InstallMode::All),
         }
     }
