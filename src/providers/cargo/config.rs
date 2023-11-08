@@ -23,6 +23,24 @@ pub struct CargoConfig {
 }
 
 impl CargoConfig {
+    pub fn filter_target(&self, targets: &[String]) -> Self {
+        let mut new_installs = HashMap::default();
+        for target in targets.iter() {
+            if let Some(install) = self.installs.get(target) {
+                new_installs.insert(target.to_string(), install.clone());
+            }
+        }
+        Self::new(new_installs)
+    }
+
+    pub fn merge(base_config: &Self, new_config: &Self) -> Self {
+        let mut new_installs = base_config.installs().clone();
+        for (name, install) in new_config.installs().iter() {
+            new_installs.insert(name.to_string(), install.clone());
+        }
+        Self::new(new_installs)
+    }
+
     pub async fn get_need_install_config(
         base: &Self,
         old: &Self,

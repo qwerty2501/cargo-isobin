@@ -13,7 +13,7 @@ use providers::cargo::CargoConfig;
 use serde_derive::{Deserialize, Serialize};
 use tokio::{fs, io::AsyncWriteExt};
 
-#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Getters, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Getters, Default, new)]
 pub struct IsobinConfig {
     #[serde(default)]
     cargo: CargoConfig,
@@ -80,6 +80,14 @@ impl IsobinConfig {
     }
     pub fn fix(&mut self, isobin_config_dir: &Path) {
         self.cargo.fix(isobin_config_dir)
+    }
+
+    pub fn filter_target(&self, targets: &[String]) -> Self {
+        Self::new(self.cargo().filter_target(targets))
+    }
+
+    pub fn merge(base_config: &Self, new_config: &Self) -> Self {
+        Self::new(CargoConfig::merge(base_config.cargo(), new_config.cargo()))
     }
 
     async fn parse(
