@@ -18,7 +18,6 @@ pub struct Workspace {
 }
 
 impl Workspace {
-    #[allow(dead_code)]
     pub fn new(id: String, base_unique_workspace_dir: PathBuf, unique_cache_dir: PathBuf) -> Self {
         let home_dir = base_unique_workspace_dir.join("home");
         let bin_dir = home_dir.join("bin");
@@ -30,6 +29,13 @@ impl Workspace {
             base_dir: base_unique_workspace_dir,
         }
     }
+    pub fn make_tmp_workspace(&self) -> Self {
+        Self::new(
+            self.id().clone(),
+            self.cache_dir().join(nanoid!()),
+            self.cache_dir().clone(),
+        )
+    }
 }
 
 #[derive(Default)]
@@ -38,7 +44,6 @@ pub struct WorkspaceProvider {
 }
 
 impl WorkspaceProvider {
-    #[allow(dead_code)]
     pub async fn base_unique_workspace_dir_from_isobin_config_dir(
         &self,
         isobin_config_dir: impl AsRef<Path>,
@@ -67,11 +72,6 @@ impl WorkspaceProvider {
             base_unique_workspace_dir,
             unique_cache_dir,
         ))
-    }
-
-    #[allow(dead_code)]
-    pub fn new(project: Project) -> Self {
-        Self { project }
     }
 }
 

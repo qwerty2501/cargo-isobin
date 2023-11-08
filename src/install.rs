@@ -48,11 +48,7 @@ impl InstallService {
             .workspace_provider
             .base_unique_workspace_dir_from_isobin_config_dir(isobin_config_dir)
             .await?;
-        let tmp_workspace = Workspace::new(
-            workspace.id().clone(),
-            workspace.cache_dir().join(nanoid!()),
-            workspace.cache_dir().clone(),
-        );
+        let tmp_workspace = workspace.make_tmp_workspace();
         let isobin_config_file_cache_path = tmp_workspace
             .base_dir()
             .join(Self::ISOBIN_CONFIG_FILE_CACHE_NAME);
