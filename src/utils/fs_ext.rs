@@ -57,9 +57,10 @@ pub async fn make_hard_links_in_dir(
         for executable_file in executable_files.iter() {
             let file_name = executable_file.file_name().unwrap().to_str().unwrap();
             let to_file_path = to_dir.join(file_name);
-            if !to_file_path.exists() {
-                fs::hard_link(executable_file, to_file_path).await?;
+            if to_file_path.exists() {
+                fs::remove_file(&to_file_path).await?;
             }
+            fs::hard_link(executable_file, to_file_path).await?;
         }
         Ok(())
     } else {
