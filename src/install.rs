@@ -42,7 +42,7 @@ impl InstallService {
         install_service_option: InstallServiceOption,
     ) -> Result<()> {
         let isobin_config =
-            IsobinConfig::parse_from_file(service_option.isobin_config_path()).await?;
+            IsobinConfig::load_from_file(service_option.isobin_config_path()).await?;
         let isobin_config_dir = isobin_config_dir(service_option.isobin_config_path())?;
         let workspace = self
             .workspace_provider

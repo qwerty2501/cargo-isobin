@@ -18,19 +18,6 @@ pub struct IsobinConfig {
     cargo: CargoConfig,
 }
 
-impl IsobinConfig {
-    pub async fn get_need_install_config(
-        base: &Self,
-        old: &Self,
-        workspace: &Workspace,
-    ) -> Result<Self> {
-        Ok(Self {
-            cargo: CargoConfig::get_need_install_config(base.cargo(), old.cargo(), workspace)
-                .await?,
-        })
-    }
-}
-
 #[derive(thiserror::Error, Debug, new)]
 pub enum IsobinConfigError {
     #[error("The target file does not have extension\npath:{path}")]
@@ -50,8 +37,7 @@ pub enum IsobinConfigError {
 }
 
 impl IsobinConfig {
-    #[allow(dead_code)]
-    pub async fn parse_from_file(path: impl AsRef<Path>) -> Result<IsobinConfig> {
+    pub async fn load_from_file(path: impl AsRef<Path>) -> Result<IsobinConfig> {
         let file_extension = Self::get_file_extension(path.as_ref())?;
         let mut isobin_config = Self::parse(file_extension, path.as_ref()).await?;
         let isobin_config_dir = path
@@ -105,6 +91,16 @@ impl IsobinConfig {
             ConfigFileExtensions::Json => Ok(Json::parse_from_file(path).await?),
         }
     }
+    pub async fn get_need_install_config(
+        base: &Self,
+        old: &Self,
+        workspace: &Workspace,
+    ) -> Result<Self> {
+        Ok(Self {
+            cargo: CargoConfig::get_need_install_config(base.cargo(), old.cargo(), workspace)
+                .await?,
+        })
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -133,7 +129,7 @@ mod tests {
     #[tokio::test]
     async fn isobin_config_from_path_works(#[case] path: &str, #[case] expected: IsobinConfig) {
         let dir = current_source_dir!();
-        let actual = IsobinConfig::parse_from_file(dir.join(path)).await.unwrap();
+        let actual = IsobinConfig::load_from_file(dir.join(path)).await.unwrap();
         pretty_assertions::assert_eq!(expected, actual);
     }
 
