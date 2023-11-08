@@ -1,6 +1,5 @@
 use nanoid::nanoid;
 use tokio::fs;
-use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 
 use crate::fronts::MultiProgress;
@@ -34,7 +33,6 @@ pub struct InstallService {
 }
 
 impl InstallService {
-    const ISOBIN_CONFIG_FILE_CACHE_NAME: &str = "isobin_cache.v1.json";
     #[allow(unused_variables)]
     pub async fn install(
         &self,
@@ -49,43 +47,29 @@ impl InstallService {
             .base_unique_workspace_dir_from_isobin_config_dir(isobin_config_dir)
             .await?;
         let tmp_workspace = workspace.make_tmp_workspace();
-        let isobin_config_file_cache_path = tmp_workspace
-            .base_dir()
-            .join(Self::ISOBIN_CONFIG_FILE_CACHE_NAME);
-
-        let source_isobin_config = if !install_service_option.force {
-            if workspace.base_dir().exists() {
-                fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir()).await?;
-                copy_dir(
-                    workspace.base_dir().clone(),
-                    tmp_workspace.base_dir().clone(),
-                )
-                .await?;
-            }
-            if isobin_config_file_cache_path.exists() {
-                let cache = fs::read(&isobin_config_file_cache_path).await?;
-                let isobin_config_cache: IsobinConfig = serde_json::from_slice(&cache)?;
-                IsobinConfig::get_need_install_config(
-                    &isobin_config,
-                    &isobin_config_cache,
-                    &tmp_workspace,
-                )
-                .await?
-            } else {
-                isobin_config.clone()
-            }
-        } else {
-            isobin_config.clone()
-        };
-
-        let mut isobin_config_file_cache =
-            fs_ext::open_file_create_if_not_exists(isobin_config_file_cache_path).await?;
-        let sirialized_isobin_config = serde_json::to_vec(&isobin_config)?;
-        isobin_config_file_cache
-            .write_all(&sirialized_isobin_config)
+        if workspace.base_dir().exists() {
+            fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir()).await?;
+            copy_dir(
+                workspace.base_dir().clone(),
+                tmp_workspace.base_dir().clone(),
+            )
             .await?;
+        }
+        let isobin_config_cache = if install_service_option.force {
+            IsobinConfig::default()
+        } else {
+            IsobinConfigCache::lenient_load_cache_from_dir(tmp_workspace.base_dir()).await
+        };
+        let source_isobin_config = IsobinConfig::get_need_install_config(
+            &isobin_config,
+            &isobin_config_cache,
+            &tmp_workspace,
+        )
+        .await?;
 
         fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir()).await?;
+        IsobinConfigCache::save_cache_to_dir(&isobin_config, tmp_workspace.base_dir()).await?;
+
         let cargo_installer_factory = CargoInstallerFactory::new(tmp_workspace.clone());
         let install_runner_provider = InstallRunnerProvider::default();
         let cargo_runner = install_runner_provider

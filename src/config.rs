@@ -3,14 +3,15 @@ use crate::{
     paths::{isobin_config::IsobinConfigPathError, workspace::Workspace},
     providers::ProviderKind,
     utils::{
-        io_ext,
+        fs_ext, io_ext,
         serde_ext::{Json, Toml, Yaml},
     },
 };
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use providers::cargo::CargoConfig;
 use serde_derive::{Deserialize, Serialize};
+use tokio::{fs, io::AsyncWriteExt};
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Getters, Default)]
 pub struct IsobinConfig {
@@ -108,6 +109,45 @@ enum ConfigFileExtensions {
     Yaml,
     Toml,
     Json,
+}
+
+pub struct IsobinConfigCache;
+
+impl IsobinConfigCache {
+    const ISOBIN_CONFIG_FILE_CACHE_NAME: &str = "isobin_cache.v1.json";
+    fn make_cache_path(dir: impl AsRef<Path>) -> PathBuf {
+        dir.as_ref().join(Self::ISOBIN_CONFIG_FILE_CACHE_NAME)
+    }
+
+    pub async fn lenient_load_cache_from_dir(dir: impl AsRef<Path>) -> IsobinConfig {
+        let cache_file_path = Self::make_cache_path(dir);
+        if cache_file_path.exists() {
+            match Self::load_cache_from_path(cache_file_path).await {
+                Ok(cache) => cache,
+                Err(_) => IsobinConfig::default(),
+            }
+        } else {
+            IsobinConfig::default()
+        }
+    }
+
+    pub async fn save_cache_to_dir(
+        isobin_config: &IsobinConfig,
+        dir: impl AsRef<Path>,
+    ) -> Result<()> {
+        let cache_file_path = Self::make_cache_path(dir);
+        let mut isobin_config_file_cache =
+            fs_ext::open_file_create_if_not_exists(cache_file_path).await?;
+        let sirialized_isobin_config = serde_json::to_vec(isobin_config)?;
+        isobin_config_file_cache
+            .write_all(&sirialized_isobin_config)
+            .await?;
+        Ok(())
+    }
+    async fn load_cache_from_path(cache_file_path: impl AsRef<Path>) -> Result<IsobinConfig> {
+        let data = fs::read(cache_file_path).await?;
+        Ok(serde_json::from_slice(&data)?)
+    }
 }
 
 #[cfg(test)]
