@@ -60,22 +60,41 @@ impl InstallService {
         } else {
             IsobinConfigCache::lenient_load_cache_from_dir(tmp_workspace.base_dir()).await
         };
-        let source_isobin_config = IsobinConfig::get_need_install_config(
+        let install_target_isobin_config = IsobinConfig::get_need_install_config(
             &isobin_config,
             &isobin_config_cache,
             &tmp_workspace,
         )
         .await?;
 
+        self.run_install(
+            &workspace,
+            &tmp_workspace,
+            &isobin_config,
+            &install_target_isobin_config,
+        )
+        .await
+    }
+
+    async fn run_install(
+        &self,
+        workspace: &Workspace,
+        tmp_workspace: &Workspace,
+        isobin_config: &IsobinConfig,
+        install_target_isobin_config: &IsobinConfig,
+    ) -> Result<()> {
         fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir()).await?;
-        IsobinConfigCache::save_cache_to_dir(&isobin_config, tmp_workspace.base_dir()).await?;
+        IsobinConfigCache::save_cache_to_dir(isobin_config, tmp_workspace.base_dir()).await?;
 
         let cargo_installer_factory = CargoInstallerFactory::new(tmp_workspace.clone());
         let install_runner_provider = InstallRunnerProvider::default();
         let cargo_runner = install_runner_provider
-            .make_cargo_runner(&cargo_installer_factory, source_isobin_config.cargo())
+            .make_cargo_runner(
+                &cargo_installer_factory,
+                install_target_isobin_config.cargo(),
+            )
             .await?;
-        self.run_each_installs(&workspace, &tmp_workspace, vec![cargo_runner])
+        self.run_each_installs(workspace, tmp_workspace, vec![cargo_runner])
             .await
     }
 
