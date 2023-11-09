@@ -11,6 +11,7 @@ use crate::providers::cargo::CargoConfig;
 use crate::providers::cargo::CargoInstallTarget;
 use crate::providers::cargo::CargoInstallerFactory;
 use crate::providers::InstallTarget;
+use crate::service_option::ServiceOptionBuilder;
 use crate::utils::fs_ext;
 use crate::utils::fs_ext::copy_dir;
 use std::collections::HashSet;
@@ -34,14 +35,10 @@ pub struct InstallService {
 
 impl InstallService {
     #[allow(unused_variables)]
-    pub async fn install(
-        &self,
-        service_option: ServiceOption,
-        install_service_option: InstallServiceOption,
-    ) -> Result<()> {
+    pub async fn install(&self, install_service_option: InstallServiceOption) -> Result<()> {
         let isobin_config =
-            IsobinConfig::load_from_file(service_option.isobin_config_path()).await?;
-        let isobin_config_dir = isobin_config_dir(service_option.isobin_config_path())?;
+            IsobinConfig::load_from_file(install_service_option.isobin_config_path()).await?;
+        let isobin_config_dir = isobin_config_dir(install_service_option.isobin_config_path())?;
         let workspace = self
             .workspace_provider
             .base_unique_workspace_dir_from_isobin_config_dir(isobin_config_dir)
@@ -316,12 +313,14 @@ impl<
 pub struct InstallServiceOption {
     force: bool,
     mode: InstallMode,
+    isobin_config_path: PathBuf,
 }
 
 #[derive(Default)]
 pub struct InstallServiceOptionBuilder {
     force: bool,
     mode: Option<InstallMode>,
+    service_option_builder: ServiceOptionBuilder,
 }
 
 impl InstallServiceOptionBuilder {
@@ -333,11 +332,20 @@ impl InstallServiceOptionBuilder {
         self.force = force;
         self
     }
-    pub fn build(self) -> InstallServiceOption {
-        InstallServiceOption {
+    pub fn isobin_config_path(mut self, isobin_config_path: Option<PathBuf>) -> Self {
+        self.service_option_builder = self
+            .service_option_builder
+            .isobin_config_path(isobin_config_path);
+        self
+    }
+
+    pub async fn try_build(self) -> Result<InstallServiceOption> {
+        let service_option = self.service_option_builder.try_build().await?;
+        Ok(InstallServiceOption {
             force: self.force,
             mode: self.mode.unwrap_or(InstallMode::All),
-        }
+            isobin_config_path: service_option.isobin_config_path().clone(),
+        })
     }
 }
 

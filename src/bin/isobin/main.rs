@@ -25,29 +25,21 @@ pub struct Application {
 
 impl Application {
     pub async fn run(&self, args: Arguments) -> Result<()> {
-        let service_option_builder = ServiceOptionBuilder::default();
-        let service_option_builder = if let Some(isobin_config_path) = args.isobin_config_path {
-            service_option_builder.isobin_config_path(isobin_config_path)
-        } else {
-            service_option_builder
-        };
-        let service_option = service_option_builder.try_build().await?;
-
         let subcommand = args.subcommand;
         match subcommand {
             SubCommands::Install {
                 force,
                 install_targets,
             } => {
-                self.run_install(service_option, force, install_targets)
+                self.run_install(args.isobin_config_path, force, install_targets)
                     .await
             }
-            SubCommands::Path => self.run_path(service_option).await,
+            SubCommands::Path => self.run_path(args.isobin_config_path).await,
         }
     }
     async fn run_install(
         &self,
-        service_option: ServiceOption,
+        isobin_config_path: Option<PathBuf>,
         force: bool,
         install_targets: Vec<String>,
     ) -> Result<()> {
@@ -60,16 +52,20 @@ impl Application {
                     specific_install_targets: install_targets,
                 }
             })
+            .isobin_config_path(isobin_config_path)
             .force(force)
-            .build();
-        self.install_service
-            .install(service_option, install_service_option)
+            .try_build()
             .await?;
+        self.install_service.install(install_service_option).await?;
         eprintln!("Completed instllations.");
         Ok(())
     }
-    async fn run_path(&self, service_option: ServiceOption) -> Result<()> {
-        let path = self.path_service.path(service_option).await?;
+    async fn run_path(&self, isobin_config_path: Option<PathBuf>) -> Result<()> {
+        let path_service_option = PathServiceOptionBuilder::default()
+            .isobin_config_path(isobin_config_path)
+            .try_build()
+            .await?;
+        let path = self.path_service.path(path_service_option).await?;
         println!("{}", path.display());
         Ok(())
     }

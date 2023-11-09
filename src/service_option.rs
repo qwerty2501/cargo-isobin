@@ -2,23 +2,21 @@ use tokio::fs;
 
 use super::*;
 use crate::paths::isobin_config::search_isobin_config_path;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[derive(Getters)]
-pub struct ServiceOption {
+pub(crate) struct ServiceOption {
     isobin_config_path: PathBuf,
 }
 
 #[derive(Default)]
-pub struct ServiceOptionBuilder {
+pub(crate) struct ServiceOptionBuilder {
     isobin_config_path: Option<PathBuf>,
 }
 
 impl ServiceOptionBuilder {
-    pub fn isobin_config_path(self, isobin_config_path: impl AsRef<Path>) -> Self {
-        Self {
-            isobin_config_path: Some(isobin_config_path.as_ref().into()),
-        }
+    pub fn isobin_config_path(self, isobin_config_path: Option<PathBuf>) -> Self {
+        Self { isobin_config_path }
     }
 
     pub async fn try_build(self) -> Result<ServiceOption> {

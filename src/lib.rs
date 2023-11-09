@@ -19,7 +19,6 @@ pub use errors::*;
 pub use install::*;
 pub use path::*;
 pub use result::*;
-pub use service_option::*;
 
 use async_trait::async_trait;
 pub use config::*;
