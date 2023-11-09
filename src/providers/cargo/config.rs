@@ -95,9 +95,6 @@ impl CargoConfig {
             }
         }
     }
-}
-
-impl CargoConfig {
     pub fn validate(&self) -> Result<()> {
         let errs = self
             .installs
