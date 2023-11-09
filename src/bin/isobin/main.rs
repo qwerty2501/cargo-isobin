@@ -7,7 +7,7 @@ async fn main() {
     let app = Application::default();
 
     let args = Arguments::parse();
-    let result = app.run(args).await;
+    let result = app.exec(args).await;
     match result {
         Ok(()) => {}
         Err(err) => {
@@ -24,20 +24,20 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn run(&self, args: Arguments) -> Result<()> {
+    pub async fn exec(&self, args: Arguments) -> Result<()> {
         let subcommand = args.subcommand;
         match subcommand {
             SubCommands::Install {
                 force,
                 install_targets,
             } => {
-                self.run_install(args.isobin_config_path, force, install_targets)
+                self.install(args.isobin_config_path, force, install_targets)
                     .await
             }
-            SubCommands::Path => self.run_path(args.isobin_config_path).await,
+            SubCommands::Path => self.path(args.isobin_config_path).await,
         }
     }
-    async fn run_install(
+    async fn install(
         &self,
         isobin_config_path: Option<PathBuf>,
         force: bool,
@@ -60,7 +60,7 @@ impl Application {
         eprintln!("Completed instllations.");
         Ok(())
     }
-    async fn run_path(&self, isobin_config_path: Option<PathBuf>) -> Result<()> {
+    async fn path(&self, isobin_config_path: Option<PathBuf>) -> Result<()> {
         let path_service_option = PathServiceOptionBuilder::default()
             .isobin_config_path(isobin_config_path)
             .try_build()
