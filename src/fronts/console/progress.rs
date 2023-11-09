@@ -35,7 +35,7 @@ impl Progress {
 
     pub fn already_installed(&self) -> Result<()> {
         self.progress_bar
-            .set_message("already installed".green().to_string());
+            .set_message("already installed".cyan().to_string());
         self.progress_bar.finish();
         Ok(())
     }

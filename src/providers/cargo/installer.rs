@@ -221,4 +221,20 @@ impl BinPathInstaller for CargoBinPathInstaller {
         make_hard_links_in_dir(cargo_bin_dir, self.workspace.bin_dir()).await?;
         Ok(())
     }
+
+    async fn uninstall_bin_path(&self, target: &Self::InstallTarget) -> Result<()> {
+        let bin_paths = self.bin_paths(target).await?;
+        for bin_path in bin_paths.iter() {
+            if let Some(file_name) = bin_path.file_name().map(|f| f.to_str().unwrap()) {
+                let workspace_bin_path = self.workspace.bin_dir().join(file_name);
+                if workspace_bin_path.exists() {
+                    let actual_bin_path = fs::read_link(&workspace_bin_path).await?;
+                    if &actual_bin_path == bin_path {
+                        fs::remove_file(workspace_bin_path).await?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
 }

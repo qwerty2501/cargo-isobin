@@ -100,7 +100,6 @@ impl InstallService {
         let install_runner_provider = InstallRunnerProvider::default();
         let cargo_runner = install_runner_provider
             .make_cargo_runner(
-                tmp_workspace.clone(),
                 &cargo_installer_factory,
                 specified_isobin_config.cargo(),
                 install_target_isobin_config.cargo(),
@@ -185,7 +184,6 @@ pub struct InstallRunnerProvider {
 impl InstallRunnerProvider {
     pub async fn make_cargo_runner(
         &self,
-        workspace: Workspace,
         cargo_installer: &CargoInstallerFactory,
         specified_cargo_config: &CargoConfig,
         install_target_cargo_config: &CargoConfig,
@@ -205,13 +203,11 @@ impl InstallRunnerProvider {
                 CargoInstallTarget::new(name.into(), install_dependency.clone(), mode)
             })
             .collect::<Vec<_>>();
-        self.make_runner(workspace, cargo_installer, install_targets)
-            .await
+        self.make_runner(cargo_installer, install_targets).await
     }
 
     async fn make_runner<IF: providers::InstallerFactory>(
         &self,
-        workspace: Workspace,
         installer_factory: &IF,
         targets: Vec<IF::InstallTarget>,
     ) -> Result<Arc<Mutex<dyn InstallRunner>>> {
@@ -230,7 +226,6 @@ impl InstallRunnerProvider {
             core_installer,
             bin_path_installer,
             contexts,
-            workspace,
         ))))
     }
 }
@@ -252,7 +247,6 @@ struct InstallRunnerImpl<
     core_installer: CI,
     bin_path_installer: BI,
     contexts: Vec<InstallTargetContext<IT>>,
-    workspace: Workspace,
 }
 
 impl<
@@ -266,7 +260,6 @@ impl<
             Self::install(
                 self.core_installer.clone(),
                 self.bin_path_installer.clone(),
-                self.workspace.clone(),
                 context.clone(),
             )
             .await?;
@@ -278,7 +271,6 @@ impl<
             Self::install(
                 self.core_installer.clone(),
                 self.bin_path_installer.clone(),
-                self.workspace.clone(),
                 target.clone(),
             )
         }))
@@ -289,11 +281,9 @@ impl<
     async fn install(
         core_installer: CI,
         bin_path_installer: BI,
-        workspace: Workspace,
         install_context: InstallTargetContext<IT>,
     ) -> Result<()> {
         let progress = install_context.progress();
-
         let target = install_context.target();
         match target.mode() {
             InstallTargetMode::Install => {
@@ -312,24 +302,8 @@ impl<
             InstallTargetMode::AlreadyInstalled => progress.already_installed(),
             InstallTargetMode::Uninstall => {
                 progress.start_uninstall()?;
-                match core_installer.uninstall(target).await {
+                match Self::uninstall(core_installer, bin_path_installer, target).await {
                     Ok(_) => {
-                        let bin_paths = bin_path_installer.bin_paths(target).await?;
-                        for bin_path in bin_paths.iter() {
-                            if let Some(file_name) =
-                                bin_path.file_name().map(|f| f.to_str().unwrap())
-                            {
-                                let workspace_bin_path = workspace.bin_dir().join(file_name);
-                                if workspace_bin_path.exists() {
-                                    let actual_bin_path =
-                                        fs::read_link(&workspace_bin_path).await?;
-                                    if &actual_bin_path == bin_path {
-                                        fs::remove_file(workspace_bin_path).await?;
-                                    }
-                                }
-                            }
-                        }
-
                         progress.done_uninstall()?;
                         Ok(())
                     }
@@ -340,6 +314,10 @@ impl<
                 }
             }
         }
+    }
+    async fn uninstall(core_installer: CI, bin_path_installer: BI, target: &IT) -> Result<()> {
+        bin_path_installer.uninstall_bin_path(target).await?;
+        core_installer.uninstall(target).await
     }
 }
 
