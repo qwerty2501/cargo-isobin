@@ -41,16 +41,16 @@ impl Application {
         &self,
         isobin_config_path: Option<PathBuf>,
         force: bool,
-        install_targets: Vec<String>,
+        install_targets: Option<Vec<String>>,
     ) -> Result<()> {
         eprintln!("Start instllations.");
         let install_service_option = InstallServiceOptionBuilder::default()
-            .mode(if install_targets.is_empty() {
-                InstallMode::All
-            } else {
+            .mode(if let Some(install_targets) = install_targets {
                 InstallMode::SpecificInstallTargetsOnly {
                     specific_install_targets: install_targets,
                 }
+            } else {
+                InstallMode::All
             })
             .isobin_config_path(isobin_config_path)
             .force(force)
@@ -84,9 +84,9 @@ pub struct Arguments {
 #[derive(Subcommand)]
 pub enum SubCommands {
     Install {
-        #[arg(short, long)]
+        #[arg(short, long, default_value_t = false)]
         force: bool,
-        install_targets: Vec<String>,
+        install_targets: Option<Vec<String>>,
     },
     Path,
 }
