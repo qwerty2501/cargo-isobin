@@ -213,11 +213,11 @@ impl CargoBinPathInstaller {
 impl BinPathInstaller for CargoBinPathInstaller {
     type InstallTarget = CargoInstallTarget;
 
-    async fn bin_paths(&self, target: Self::InstallTarget) -> Result<Vec<PathBuf>> {
-        enumerate_executable_files(self.bin_dir(&target)).await
+    async fn bin_paths(&self, target: &Self::InstallTarget) -> Result<Vec<PathBuf>> {
+        enumerate_executable_files(self.bin_dir(target)).await
     }
-    async fn install_bin_path(&self, target: Self::InstallTarget) -> Result<()> {
-        let cargo_bin_dir = self.bin_dir(&target);
+    async fn install_bin_path(&self, target: &Self::InstallTarget) -> Result<()> {
+        let cargo_bin_dir = self.bin_dir(target);
         make_hard_links_in_dir(cargo_bin_dir, self.workspace.bin_dir()).await?;
         Ok(())
     }

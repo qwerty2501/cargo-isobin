@@ -100,6 +100,7 @@ impl InstallService {
         let install_runner_provider = InstallRunnerProvider::default();
         let cargo_runner = install_runner_provider
             .make_cargo_runner(
+                workspace.clone(),
                 &cargo_installer_factory,
                 specified_isobin_config.cargo(),
                 install_target_isobin_config.cargo(),
@@ -184,6 +185,7 @@ pub struct InstallRunnerProvider {
 impl InstallRunnerProvider {
     pub async fn make_cargo_runner(
         &self,
+        workspace: Workspace,
         cargo_installer: &CargoInstallerFactory,
         specified_cargo_config: &CargoConfig,
         install_target_cargo_config: &CargoConfig,
@@ -203,11 +205,13 @@ impl InstallRunnerProvider {
                 CargoInstallTarget::new(name.into(), install_dependency.clone(), mode)
             })
             .collect::<Vec<_>>();
-        self.make_runner(cargo_installer, install_targets).await
+        self.make_runner(workspace, cargo_installer, install_targets)
+            .await
     }
 
     async fn make_runner<IF: providers::InstallerFactory>(
         &self,
+        workspace: Workspace,
         installer_factory: &IF,
         targets: Vec<IF::InstallTarget>,
     ) -> Result<Arc<Mutex<dyn InstallRunner>>> {
@@ -226,6 +230,7 @@ impl InstallRunnerProvider {
             core_installer,
             bin_path_installer,
             contexts,
+            workspace,
         ))))
     }
 }
@@ -247,6 +252,7 @@ struct InstallRunnerImpl<
     core_installer: CI,
     bin_path_installer: BI,
     contexts: Vec<InstallTargetContext<IT>>,
+    workspace: Workspace,
 }
 
 impl<
@@ -257,20 +263,35 @@ impl<
 {
     async fn run_sequential_installs(&self) -> Result<()> {
         for context in self.contexts.iter() {
-            Self::install(self.core_installer.clone(), context.clone()).await?;
+            Self::install(
+                self.core_installer.clone(),
+                self.bin_path_installer.clone(),
+                self.workspace.clone(),
+                context.clone(),
+            )
+            .await?;
         }
         Ok(())
     }
     async fn run_parallel_installs(&self) -> Result<()> {
-        join_futures!(self
-            .contexts
-            .iter()
-            .map(|target| { Self::install(self.core_installer.clone(), target.clone()) }))
+        join_futures!(self.contexts.iter().map(|target| {
+            Self::install(
+                self.core_installer.clone(),
+                self.bin_path_installer.clone(),
+                self.workspace.clone(),
+                target.clone(),
+            )
+        }))
         .await
         .map_err(InstallServiceError::MultiInstall)?;
         Ok(())
     }
-    async fn install(core_installer: CI, install_context: InstallTargetContext<IT>) -> Result<()> {
+    async fn install(
+        core_installer: CI,
+        bin_path_installer: BI,
+        workspace: Workspace,
+        install_context: InstallTargetContext<IT>,
+    ) -> Result<()> {
         let progress = install_context.progress();
 
         let target = install_context.target();
@@ -293,6 +314,22 @@ impl<
                 progress.start_uninstall()?;
                 match core_installer.uninstall(target).await {
                     Ok(_) => {
+                        let bin_paths = bin_path_installer.bin_paths(target).await?;
+                        for bin_path in bin_paths.iter() {
+                            if let Some(file_name) =
+                                bin_path.file_name().map(|f| f.to_str().unwrap())
+                            {
+                                let workspace_bin_path = workspace.bin_dir().join(file_name);
+                                if workspace_bin_path.exists() {
+                                    let actual_bin_path =
+                                        fs::read_link(&workspace_bin_path).await?;
+                                    if &actual_bin_path == bin_path {
+                                        fs::remove_file(workspace_bin_path).await?;
+                                    }
+                                }
+                            }
+                        }
+
                         progress.done_uninstall()?;
                         Ok(())
                     }
@@ -327,7 +364,7 @@ impl<
         let bin_paths = join_futures!(self.contexts.iter().map(|context| {
             let bin_path_installer = self.bin_path_installer.clone();
             let target = context.target().clone();
-            async move { bin_path_installer.bin_paths(target).await }
+            async move { bin_path_installer.bin_paths(&target).await }
         }))
         .await
         .map_err(InstallServiceError::MultiInstall)?;
@@ -337,7 +374,7 @@ impl<
         join_futures!(self.contexts.iter().map(|context| {
             let bin_path_installer = self.bin_path_installer.clone();
             let target = context.target().clone();
-            async move { bin_path_installer.install_bin_path(target).await }
+            async move { bin_path_installer.install_bin_path(&target).await }
         }))
         .await
         .map_err(InstallServiceError::MultiInstall)?;
