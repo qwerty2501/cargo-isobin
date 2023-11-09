@@ -35,6 +35,7 @@ pub trait InstallTarget: 'static + Send + Sync + Clone {
     fn mode(&self) -> &InstallTargetMode;
     fn provider_kind(&self) -> ProviderKind;
     fn name(&self) -> &str;
+    fn summary(&self) -> String;
 }
 
 #[async_trait]

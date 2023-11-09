@@ -187,6 +187,28 @@ impl providers::InstallTarget for CargoInstallTarget {
     fn mode(&self) -> &InstallTargetMode {
         &self.mode
     }
+    fn summary(&self) -> String {
+        match self.install_dependency() {
+            CargoInstallDependency::Simple(version) => version.to_string(),
+            CargoInstallDependency::Detailed(dependency) => {
+                if let Some(git) = dependency.git() {
+                    if let Some(rev) = dependency.rev() {
+                        format!("{git} {rev}")
+                    } else if let Some(version) = dependency.version() {
+                        format!("{git} {version}")
+                    } else {
+                        git.to_string()
+                    }
+                } else if let Some(version) = dependency.version() {
+                    version.to_string()
+                } else if let Some(path) = dependency.path() {
+                    path.to_string_lossy().to_string()
+                } else {
+                    String::new()
+                }
+            }
+        }
+    }
 }
 #[derive(Clone)]
 pub struct CargoBinPathInstaller {
