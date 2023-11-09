@@ -16,6 +16,7 @@ pub trait CoreInstaller: 'static + Send + Sync + Clone {
     fn provider_kind(&self) -> providers::ProviderKind;
     fn multi_install_mode(&self) -> MultiInstallMode;
     async fn install(&self, target: &Self::InstallTarget) -> Result<()>;
+    async fn uninstall(&self, target: &Self::InstallTarget) -> Result<()>;
 }
 
 pub enum MultiInstallMode {
@@ -23,7 +24,15 @@ pub enum MultiInstallMode {
     Sequential,
 }
 
+#[derive(Clone)]
+pub enum InstallTargetMode {
+    Install,
+    AlreadyInstalled,
+    Uninstall,
+}
+
 pub trait InstallTarget: 'static + Send + Sync + Clone {
+    fn mode(&self) -> &InstallTargetMode;
     fn provider_kind(&self) -> ProviderKind;
     fn name(&self) -> &str;
 }

@@ -11,6 +11,7 @@ use crate::providers::cargo::CargoConfig;
 use crate::providers::cargo::CargoInstallTarget;
 use crate::providers::cargo::CargoInstallerFactory;
 use crate::providers::InstallTarget;
+use crate::providers::InstallTargetMode;
 use crate::service_option::ServiceOptionBuilder;
 use crate::utils::fs_ext;
 use crate::utils::fs_ext::copy_dir;
@@ -34,7 +35,6 @@ pub struct InstallService {
 }
 
 impl InstallService {
-    #[allow(unused_variables)]
     pub async fn install(&self, install_service_option: InstallServiceOption) -> Result<()> {
         let isobin_config =
             IsobinConfig::load_from_file(install_service_option.isobin_config_path()).await?;
@@ -77,7 +77,9 @@ impl InstallService {
             &workspace,
             &tmp_workspace,
             &save_isobin_config,
+            &specified_isobin_config,
             &install_target_isobin_config,
+            &IsobinConfig::default(),
         )
         .await
     }
@@ -87,7 +89,9 @@ impl InstallService {
         workspace: &Workspace,
         tmp_workspace: &Workspace,
         save_isobin_config: &IsobinConfig,
+        specified_isobin_config: &IsobinConfig,
         install_target_isobin_config: &IsobinConfig,
+        uninstall_target_isobin_config: &IsobinConfig,
     ) -> Result<()> {
         fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir()).await?;
         IsobinConfigCache::save_cache_to_dir(save_isobin_config, tmp_workspace.base_dir()).await?;
@@ -97,7 +101,9 @@ impl InstallService {
         let cargo_runner = install_runner_provider
             .make_cargo_runner(
                 &cargo_installer_factory,
+                specified_isobin_config.cargo(),
                 install_target_isobin_config.cargo(),
+                uninstall_target_isobin_config.cargo(),
             )
             .await?;
         self.run_each_installs(workspace, tmp_workspace, vec![cargo_runner])
@@ -179,13 +185,22 @@ impl InstallRunnerProvider {
     pub async fn make_cargo_runner(
         &self,
         cargo_installer: &CargoInstallerFactory,
-        cargo_config: &CargoConfig,
+        specified_cargo_config: &CargoConfig,
+        install_target_cargo_config: &CargoConfig,
+        uninstall_target_cargo_config: &CargoConfig,
     ) -> Result<Arc<Mutex<dyn InstallRunner>>> {
-        let install_targets = cargo_config
+        let install_targets = specified_cargo_config
             .installs()
             .iter()
             .map(|(name, install_dependency)| {
-                CargoInstallTarget::new(name.into(), install_dependency.clone())
+                let mode = if install_target_cargo_config.installs().get(name).is_some() {
+                    InstallTargetMode::Install
+                } else if uninstall_target_cargo_config.installs().get(name).is_some() {
+                    InstallTargetMode::Uninstall
+                } else {
+                    InstallTargetMode::AlreadyInstalled
+                };
+                CargoInstallTarget::new(name.into(), install_dependency.clone(), mode)
             })
             .collect::<Vec<_>>();
         self.make_runner(cargo_installer, install_targets).await
@@ -203,7 +218,7 @@ impl InstallRunnerProvider {
             .map(|target| {
                 let progress = self.multi_progress.make_progress(&target);
                 let context = InstallTargetContext::new(target, progress);
-                context.progress().prepare()?;
+                context.progress().prepare_install()?;
                 Ok(context)
             })
             .collect::<Result<Vec<_>>>()?;
@@ -256,15 +271,36 @@ impl<
         Ok(())
     }
     async fn install(core_installer: CI, install_context: InstallTargetContext<IT>) -> Result<()> {
-        install_context.progress().start()?;
-        match core_installer.install(install_context.target()).await {
-            Ok(_) => {
-                install_context.progress().done()?;
-                Ok(())
+        let progress = install_context.progress();
+
+        let target = install_context.target();
+        match target.mode() {
+            InstallTargetMode::Install => {
+                progress.start_install()?;
+                match core_installer.install(target).await {
+                    Ok(_) => {
+                        progress.done_install()?;
+                        Ok(())
+                    }
+                    Err(err) => {
+                        progress.failed_install()?;
+                        Err(err)
+                    }
+                }
             }
-            Err(err) => {
-                install_context.progress().failed()?;
-                Err(err)
+            InstallTargetMode::AlreadyInstalled => progress.already_installed(),
+            InstallTargetMode::Uninstall => {
+                progress.start_uninstall()?;
+                match core_installer.uninstall(target).await {
+                    Ok(_) => {
+                        progress.done_uninstall()?;
+                        Ok(())
+                    }
+                    Err(err) => {
+                        progress.failed_uninstall()?;
+                        Err(err)
+                    }
+                }
             }
         }
     }

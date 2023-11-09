@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use tokio::process::Command;
+use tokio::{fs, process::Command};
 
 use crate::{
     paths::workspace::Workspace,
@@ -159,21 +159,33 @@ impl providers::CoreInstaller for CargoCoreInstaller {
                 .into(),
             })
     }
+
+    async fn uninstall(&self, target: &Self::InstallTarget) -> Result<()> {
+        let install_dir = self.cargo_workspace.cargo_home_dir().join(target.name());
+        if install_dir.exists() {
+            fs::remove_dir_all(&install_dir).await?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(new, Getters, Clone)]
 pub struct CargoInstallTarget {
     name: String,
     install_dependency: CargoInstallDependency,
+    mode: InstallTargetMode,
 }
 
-#[async_trait]
 impl providers::InstallTarget for CargoInstallTarget {
     fn provider_kind(&self) -> ProviderKind {
         ProviderKind::Cargo
     }
     fn name(&self) -> &str {
         &self.name
+    }
+
+    fn mode(&self) -> &InstallTargetMode {
+        &self.mode
     }
 }
 #[derive(Clone)]

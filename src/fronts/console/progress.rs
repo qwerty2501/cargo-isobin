@@ -24,7 +24,7 @@ impl Progress {
         }
     }
 
-    pub fn prepare(&self) -> Result<()> {
+    pub fn prepare_install(&self) -> Result<()> {
         self.progress_bar
             .set_style(ProgressStyle::with_template("{spinner} {prefix} {msg}")?);
         self.progress_bar
@@ -33,27 +33,63 @@ impl Progress {
         Ok(())
     }
 
-    pub fn start(&self) -> Result<()> {
+    pub fn already_installed(&self) -> Result<()> {
+        self.progress_bar
+            .set_message("already installed".green().to_string());
+        self.progress_bar.finish();
+        Ok(())
+    }
+
+    pub fn start_uninstall(&self) -> Result<()> {
+        self.progress_bar
+            .enable_steady_tick(Duration::from_millis(100));
+        self.progress_bar.set_message("uninstalling");
+        Ok(())
+    }
+
+    pub fn start_install(&self) -> Result<()> {
         self.progress_bar
             .enable_steady_tick(Duration::from_millis(100));
         self.progress_bar.set_message("installing");
         Ok(())
     }
 
-    pub fn done(&self) -> Result<()> {
+    pub fn done_install(&self) -> Result<()> {
         self.progress_bar.disable_steady_tick();
         self.progress_bar
             .set_style(ProgressStyle::with_template("  {prefix} {msg}")?);
-        self.progress_bar.set_message("done".green().to_string());
+        self.progress_bar
+            .set_message("done install".green().to_string());
         self.progress_bar.finish();
         Ok(())
     }
 
-    pub fn failed(&self) -> Result<()> {
+    pub fn done_uninstall(&self) -> Result<()> {
         self.progress_bar.disable_steady_tick();
         self.progress_bar
             .set_style(ProgressStyle::with_template("  {prefix} {msg}")?);
-        self.progress_bar.set_message("failed".red().to_string());
+        self.progress_bar
+            .set_message("done uninstall".green().to_string());
+        self.progress_bar.finish();
+        Ok(())
+    }
+
+    pub fn failed_install(&self) -> Result<()> {
+        self.progress_bar.disable_steady_tick();
+        self.progress_bar
+            .set_style(ProgressStyle::with_template("  {prefix} {msg}")?);
+        self.progress_bar
+            .set_message("failed install".red().to_string());
+        self.progress_bar.finish();
+        Ok(())
+    }
+
+    pub fn failed_uninstall(&self) -> Result<()> {
+        self.progress_bar.disable_steady_tick();
+        self.progress_bar
+            .set_style(ProgressStyle::with_template("  {prefix} {msg}")?);
+        self.progress_bar
+            .set_message("failed uninstall".red().to_string());
         self.progress_bar.finish();
         Ok(())
     }
