@@ -100,7 +100,7 @@ impl InstallService {
         let install_runner_provider = InstallRunnerProvider::default();
         let cargo_runner = install_runner_provider
             .make_cargo_runner(
-                workspace.clone(),
+                tmp_workspace.clone(),
                 &cargo_installer_factory,
                 specified_isobin_config.cargo(),
                 install_target_isobin_config.cargo(),
