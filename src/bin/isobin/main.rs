@@ -1,10 +1,10 @@
 use clap::{Parser, Subcommand};
-use isobin::{fronts::print_error, *};
+use isobin::{print_error, *};
 use std::{path::PathBuf, process::exit};
 
 #[tokio::main]
 async fn main() {
-    let app = Application::default();
+    let app = Application;
 
     let args = Arguments::parse();
     let result = app.exec(args).await;
@@ -17,11 +17,7 @@ async fn main() {
     }
 }
 
-#[derive(Default)]
-pub struct Application {
-    install_service: InstallService,
-    path_service: PathService,
-}
+pub struct Application;
 
 impl Application {
     pub async fn exec(&self, args: Arguments) -> Result<()> {
@@ -59,9 +55,7 @@ impl Application {
             install_service_option_builder
         };
 
-        self.install_service
-            .install(install_service_option_builder.build())
-            .await?;
+        install(install_service_option_builder.build()).await?;
         eprintln!("Completed instllations.");
         Ok(())
     }
@@ -72,10 +66,7 @@ impl Application {
         } else {
             path_service_option_builder
         };
-        let path = self
-            .path_service
-            .path(path_service_option_builder.build())
-            .await?;
+        let path = path(path_service_option_builder.build()).await?;
         println!("{}", path.display());
         Ok(())
     }

@@ -21,6 +21,7 @@ pub trait CoreInstaller: 'static + Send + Sync + Clone {
 
 pub enum MultiInstallMode {
     Parallel,
+    #[allow(dead_code)]
     Sequential,
 }
 
