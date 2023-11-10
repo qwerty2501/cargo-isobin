@@ -1,3 +1,5 @@
+use tokio::fs;
+
 use super::*;
 use std::cmp::Ordering;
 use std::path::{Path, PathBuf};
@@ -7,6 +9,18 @@ pub fn isobin_config_dir(isobin_confing_path: &Path) -> Result<&Path> {
         .parent()
         .ok_or_else(IsobinConfigPathError::new_not_found_isobin_config)?;
     Ok(isobin_config_dir)
+}
+
+pub async fn isobin_config_path_canonicalize(
+    isobin_config_path: Option<PathBuf>,
+) -> Result<PathBuf> {
+    let isobin_config_path = if let Some(isobin_config_path) = isobin_config_path {
+        isobin_config_path
+    } else {
+        let current_dir = std::env::current_dir().unwrap();
+        search_isobin_config_path(current_dir).await?
+    };
+    Ok(fs::canonicalize(isobin_config_path).await?)
 }
 
 pub async fn search_isobin_config_path(current_dir: impl AsRef<Path>) -> Result<PathBuf> {

@@ -5,6 +5,7 @@ use tokio::sync::Mutex;
 use crate::fronts::MultiProgress;
 use crate::fronts::Progress;
 use crate::paths::isobin_config::isobin_config_dir;
+use crate::paths::isobin_config::isobin_config_path_canonicalize;
 use crate::paths::workspace::Workspace;
 use crate::paths::workspace::WorkspaceProvider;
 use crate::providers::cargo::CargoConfig;
@@ -12,7 +13,6 @@ use crate::providers::cargo::CargoInstallTarget;
 use crate::providers::cargo::CargoInstallerFactory;
 use crate::providers::InstallTarget;
 use crate::providers::InstallTargetMode;
-use crate::service_option::ServiceOptionBuilder;
 use crate::utils::fs_ext;
 use crate::utils::fs_ext::copy_dir;
 use std::collections::HashSet;
@@ -36,6 +36,7 @@ pub struct InstallService {
 
 impl InstallService {
     pub async fn install(&self, install_service_option: InstallServiceOption) -> Result<()> {
+        let install_service_option = install_service_option.fix().await?;
         let isobin_config =
             IsobinConfig::load_from_file(install_service_option.isobin_config_path()).await?;
         let isobin_config_dir = isobin_config_dir(install_service_option.isobin_config_path())?;
@@ -364,14 +365,32 @@ impl<
 pub struct InstallServiceOption {
     force: bool,
     mode: InstallMode,
+    isobin_config_path: Option<PathBuf>,
+}
+
+#[derive(Getters)]
+pub struct FixedInstallServiceOption {
+    force: bool,
+    mode: InstallMode,
     isobin_config_path: PathBuf,
+}
+
+impl InstallServiceOption {
+    pub async fn fix(self) -> Result<FixedInstallServiceOption> {
+        let isobin_config_path = isobin_config_path_canonicalize(self.isobin_config_path).await?;
+        Ok(FixedInstallServiceOption {
+            force: self.force,
+            mode: self.mode,
+            isobin_config_path,
+        })
+    }
 }
 
 #[derive(Default)]
 pub struct InstallServiceOptionBuilder {
     force: bool,
     mode: Option<InstallMode>,
-    service_option_builder: ServiceOptionBuilder,
+    isobin_config_path: Option<PathBuf>,
 }
 
 impl InstallServiceOptionBuilder {
@@ -383,20 +402,17 @@ impl InstallServiceOptionBuilder {
         self.force = force;
         self
     }
-    pub fn isobin_config_path(mut self, isobin_config_path: Option<PathBuf>) -> Self {
-        self.service_option_builder = self
-            .service_option_builder
-            .isobin_config_path(isobin_config_path);
+    pub fn isobin_config_path(mut self, isobin_config_path: PathBuf) -> Self {
+        self.isobin_config_path = Some(isobin_config_path);
         self
     }
 
-    pub async fn try_build(self) -> Result<InstallServiceOption> {
-        let service_option = self.service_option_builder.try_build().await?;
-        Ok(InstallServiceOption {
+    pub fn build(self) -> InstallServiceOption {
+        InstallServiceOption {
             force: self.force,
             mode: self.mode.unwrap_or(InstallMode::All),
-            isobin_config_path: service_option.isobin_config_path().clone(),
-        })
+            isobin_config_path: self.isobin_config_path,
+        }
     }
 }
 

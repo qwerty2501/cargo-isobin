@@ -13,7 +13,6 @@ mod path;
 mod paths;
 pub mod providers;
 mod result;
-mod service_option;
 mod utils;
 pub use errors::*;
 pub use install::*;

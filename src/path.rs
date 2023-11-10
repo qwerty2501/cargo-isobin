@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 
 use crate::{
-    paths::{isobin_config::isobin_config_dir, workspace::WorkspaceProvider},
-    service_option::ServiceOptionBuilder,
+    paths::{
+        isobin_config::{isobin_config_dir, isobin_config_path_canonicalize},
+        workspace::WorkspaceProvider,
+    },
     Result,
 };
 
@@ -13,6 +15,7 @@ pub struct PathService {
 
 impl PathService {
     pub async fn path(&self, path_service_option: PathServiceOption) -> Result<PathBuf> {
+        let path_service_option = path_service_option.fix().await?;
         let isobin_config_dir = isobin_config_dir(path_service_option.isobin_config_path())?;
         let workspace = self
             .workspace_provider
@@ -24,25 +27,34 @@ impl PathService {
 
 #[derive(Getters)]
 pub struct PathServiceOption {
+    isobin_config_path: Option<PathBuf>,
+}
+
+impl PathServiceOption {
+    pub async fn fix(self) -> Result<FixedPathServiceOption> {
+        let isobin_config_path = isobin_config_path_canonicalize(self.isobin_config_path).await?;
+        Ok(FixedPathServiceOption { isobin_config_path })
+    }
+}
+
+#[derive(Getters)]
+pub struct FixedPathServiceOption {
     isobin_config_path: PathBuf,
 }
 
 #[derive(Default)]
 pub struct PathServiceOptionBuilder {
-    service_option_builder: ServiceOptionBuilder,
+    isobin_config_path: Option<PathBuf>,
 }
 
 impl PathServiceOptionBuilder {
-    pub fn isobin_config_path(mut self, isobin_config_path: Option<PathBuf>) -> Self {
-        self.service_option_builder = self
-            .service_option_builder
-            .isobin_config_path(isobin_config_path);
+    pub fn isobin_config_path(mut self, isobin_config_path: PathBuf) -> Self {
+        self.isobin_config_path = Some(isobin_config_path);
         self
     }
-    pub async fn try_build(self) -> Result<PathServiceOption> {
-        let service_option = self.service_option_builder.try_build().await?;
-        Ok(PathServiceOption {
-            isobin_config_path: service_option.isobin_config_path().clone(),
-        })
+    pub fn build(self) -> PathServiceOption {
+        PathServiceOption {
+            isobin_config_path: self.isobin_config_path,
+        }
     }
 }

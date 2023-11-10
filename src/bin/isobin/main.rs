@@ -44,7 +44,7 @@ impl Application {
         install_targets: Option<Vec<String>>,
     ) -> Result<()> {
         eprintln!("Start instllations.");
-        let install_service_option = InstallServiceOptionBuilder::default()
+        let install_service_option_builder = InstallServiceOptionBuilder::default()
             .mode(if let Some(install_targets) = install_targets {
                 InstallMode::SpecificInstallTargetsOnly {
                     specific_install_targets: install_targets,
@@ -52,20 +52,30 @@ impl Application {
             } else {
                 InstallMode::All
             })
-            .isobin_config_path(isobin_config_path)
-            .force(force)
-            .try_build()
+            .force(force);
+        let install_service_option_builder = if let Some(isobin_config_path) = isobin_config_path {
+            install_service_option_builder.isobin_config_path(isobin_config_path)
+        } else {
+            install_service_option_builder
+        };
+
+        self.install_service
+            .install(install_service_option_builder.build())
             .await?;
-        self.install_service.install(install_service_option).await?;
         eprintln!("Completed instllations.");
         Ok(())
     }
     async fn path(&self, isobin_config_path: Option<PathBuf>) -> Result<()> {
-        let path_service_option = PathServiceOptionBuilder::default()
-            .isobin_config_path(isobin_config_path)
-            .try_build()
+        let path_service_option_builder = PathServiceOptionBuilder::default();
+        let path_service_option_builder = if let Some(isobin_config_path) = isobin_config_path {
+            path_service_option_builder.isobin_config_path(isobin_config_path)
+        } else {
+            path_service_option_builder
+        };
+        let path = self
+            .path_service
+            .path(path_service_option_builder.build())
             .await?;
-        let path = self.path_service.path(path_service_option).await?;
         println!("{}", path.display());
         Ok(())
     }
