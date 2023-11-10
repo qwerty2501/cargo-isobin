@@ -77,7 +77,7 @@ impl Application {
 #[command(author, version, about)]
 pub struct Arguments {
     /// Sets a custom manifest file
-    #[arg(long, value_name = "PATH")]
+    #[arg(long, value_name = "PATH",value_hint = clap::ValueHint::FilePath)]
     manifest_path: Option<PathBuf>,
     #[arg(long, short, default_value_t = false)]
     quiet: bool,
