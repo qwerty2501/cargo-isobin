@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::{
     paths::{
-        isobin_config::{isobin_config_dir, isobin_config_path_canonicalize},
+        isobin_manifest::{isobin_manifest_dir, isobin_manifest_path_canonicalize},
         workspace::WorkspaceProvider,
     },
     Result,
@@ -16,10 +16,10 @@ pub struct PathService {
 impl PathService {
     pub async fn path(&self, path_service_option: PathServiceOption) -> Result<PathBuf> {
         let path_service_option = path_service_option.fix().await?;
-        let isobin_config_dir = isobin_config_dir(path_service_option.isobin_config_path())?;
+        let isobin_manifest_dir = isobin_manifest_dir(path_service_option.isobin_manifest_path())?;
         let workspace = self
             .workspace_provider
-            .base_unique_workspace_dir_from_isobin_config_dir(isobin_config_dir)
+            .base_unique_workspace_dir_from_isobin_manifest_dir(isobin_manifest_dir)
             .await?;
         Ok(workspace.bin_dir().into())
     }
@@ -27,34 +27,37 @@ impl PathService {
 
 #[derive(Getters)]
 pub struct PathServiceOption {
-    isobin_config_path: Option<PathBuf>,
+    isobin_manifest_path: Option<PathBuf>,
 }
 
 impl PathServiceOption {
     pub async fn fix(self) -> Result<FixedPathServiceOption> {
-        let isobin_config_path = isobin_config_path_canonicalize(self.isobin_config_path).await?;
-        Ok(FixedPathServiceOption { isobin_config_path })
+        let isobin_manifest_path =
+            isobin_manifest_path_canonicalize(self.isobin_manifest_path).await?;
+        Ok(FixedPathServiceOption {
+            isobin_manifest_path,
+        })
     }
 }
 
 #[derive(Getters)]
 pub struct FixedPathServiceOption {
-    isobin_config_path: PathBuf,
+    isobin_manifest_path: PathBuf,
 }
 
 #[derive(Default)]
 pub struct PathServiceOptionBuilder {
-    isobin_config_path: Option<PathBuf>,
+    isobin_manifest_path: Option<PathBuf>,
 }
 
 impl PathServiceOptionBuilder {
-    pub fn isobin_config_path(mut self, isobin_config_path: PathBuf) -> Self {
-        self.isobin_config_path = Some(isobin_config_path);
+    pub fn isobin_manifest_path(mut self, isobin_manifest_path: PathBuf) -> Self {
+        self.isobin_manifest_path = Some(isobin_manifest_path);
         self
     }
     pub fn build(self) -> PathServiceOption {
         PathServiceOption {
-            isobin_config_path: self.isobin_config_path,
+            isobin_manifest_path: self.isobin_manifest_path,
         }
     }
 }

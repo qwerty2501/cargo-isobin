@@ -27,15 +27,15 @@ impl Application {
                 force,
                 install_targets,
             } => {
-                self.install(args.isobin_config_path, force, install_targets)
+                self.install(args.manifest_path, force, install_targets)
                     .await
             }
-            SubCommands::Path => self.path(args.isobin_config_path).await,
+            SubCommands::Path => self.path(args.manifest_path).await,
         }
     }
     async fn install(
         &self,
-        isobin_config_path: Option<PathBuf>,
+        isobin_manifest_path: Option<PathBuf>,
         force: bool,
         install_targets: Option<Vec<String>>,
     ) -> Result<()> {
@@ -49,20 +49,21 @@ impl Application {
                 InstallMode::All
             })
             .force(force);
-        let install_service_option_builder = if let Some(isobin_config_path) = isobin_config_path {
-            install_service_option_builder.isobin_config_path(isobin_config_path)
-        } else {
-            install_service_option_builder
-        };
+        let install_service_option_builder =
+            if let Some(isobin_manifest_path) = isobin_manifest_path {
+                install_service_option_builder.isobin_manifest_path(isobin_manifest_path)
+            } else {
+                install_service_option_builder
+            };
 
         install(install_service_option_builder.build()).await?;
         eprintln!("Completed instllations.");
         Ok(())
     }
-    async fn path(&self, isobin_config_path: Option<PathBuf>) -> Result<()> {
+    async fn path(&self, isobin_manifest_path: Option<PathBuf>) -> Result<()> {
         let path_service_option_builder = PathServiceOptionBuilder::default();
-        let path_service_option_builder = if let Some(isobin_config_path) = isobin_config_path {
-            path_service_option_builder.isobin_config_path(isobin_config_path)
+        let path_service_option_builder = if let Some(isobin_manifest_path) = isobin_manifest_path {
+            path_service_option_builder.isobin_manifest_path(isobin_manifest_path)
         } else {
             path_service_option_builder
         };
@@ -76,8 +77,8 @@ impl Application {
 #[command(author, version, about)]
 pub struct Arguments {
     /// Sets a custom config file
-    #[arg(short, long, value_name = "FILE", name = "config")]
-    isobin_config_path: Option<PathBuf>,
+    #[arg(long, value_name = "PATH")]
+    manifest_path: Option<PathBuf>,
     #[command(subcommand)]
     subcommand: SubCommands,
 }

@@ -44,21 +44,21 @@ pub struct WorkspaceProvider {
 }
 
 impl WorkspaceProvider {
-    pub async fn base_unique_workspace_dir_from_isobin_config_dir(
+    pub async fn base_unique_workspace_dir_from_isobin_manifest_dir(
         &self,
-        isobin_config_dir: impl AsRef<Path>,
+        isobin_manifest_dir: impl AsRef<Path>,
     ) -> Result<Workspace> {
         let mut workspace_path_map =
             WorkspacePathMap::parse_from_config_dir(self.project.config_dir()).await?;
         let id = if let Some(id) = workspace_path_map
             .workspace_path_map
-            .get(isobin_config_dir.as_ref().to_str().unwrap())
+            .get(isobin_manifest_dir.as_ref().to_str().unwrap())
         {
             id.into()
         } else {
             let id = nanoid!();
             workspace_path_map.workspace_path_map.insert(
-                isobin_config_dir.as_ref().to_str().unwrap().into(),
+                isobin_manifest_dir.as_ref().to_str().unwrap().into(),
                 id.to_string(),
             );
             WorkspacePathMap::save_to_config_dir(&workspace_path_map, self.project.config_dir())

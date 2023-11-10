@@ -4,11 +4,11 @@ extern crate derive_new;
 #[macro_use]
 extern crate derive_getters;
 
-mod config;
 mod errors;
 mod fronts;
 mod install;
 mod macros;
+mod manifest;
 mod path;
 mod paths;
 mod providers;
@@ -22,7 +22,7 @@ pub use path::{PathService, PathServiceOption, PathServiceOptionBuilder};
 pub use result::*;
 
 use async_trait::async_trait;
-use config::*;
+use manifest::*;
 #[cfg(test)]
 use rstest::*;
 

@@ -4,8 +4,8 @@ use tokio::sync::Mutex;
 
 use crate::fronts::MultiProgress;
 use crate::fronts::Progress;
-use crate::paths::isobin_config::isobin_config_dir;
-use crate::paths::isobin_config::isobin_config_path_canonicalize;
+use crate::paths::isobin_manifest::isobin_manifest_dir;
+use crate::paths::isobin_manifest::isobin_manifest_path_canonicalize;
 use crate::paths::workspace::Workspace;
 use crate::paths::workspace::WorkspaceProvider;
 use crate::providers::cargo::CargoConfig;
@@ -37,12 +37,13 @@ pub struct InstallService {
 impl InstallService {
     pub async fn install(&self, install_service_option: InstallServiceOption) -> Result<()> {
         let install_service_option = install_service_option.fix().await?;
-        let isobin_config =
-            IsobinConfig::load_from_file(install_service_option.isobin_config_path()).await?;
-        let isobin_config_dir = isobin_config_dir(install_service_option.isobin_config_path())?;
+        let isobin_manifest =
+            IsobinManifest::load_from_file(install_service_option.isobin_manifest_path()).await?;
+        let isobin_manifest_dir =
+            isobin_manifest_dir(install_service_option.isobin_manifest_path())?;
         let workspace = self
             .workspace_provider
-            .base_unique_workspace_dir_from_isobin_config_dir(isobin_config_dir)
+            .base_unique_workspace_dir_from_isobin_manifest_dir(isobin_manifest_dir)
             .await?;
         let tmp_workspace = workspace.make_tmp_workspace();
         if workspace.base_dir().exists() {
@@ -53,34 +54,34 @@ impl InstallService {
             )
             .await?;
         }
-        let isobin_config_cache = if install_service_option.force {
-            IsobinConfig::default()
+        let isobin_manifest_cache = if install_service_option.force {
+            IsobinManifest::default()
         } else {
             IsobinConfigCache::lenient_load_cache_from_dir(tmp_workspace.base_dir()).await
         };
-        let specified_isobin_config = match install_service_option.mode() {
-            InstallMode::All => isobin_config,
+        let specified_isobin_manifest = match install_service_option.mode() {
+            InstallMode::All => isobin_manifest,
             InstallMode::SpecificInstallTargetsOnly {
                 specific_install_targets,
-            } => isobin_config.filter_target(specific_install_targets),
+            } => isobin_manifest.filter_target(specific_install_targets),
         };
-        let install_target_isobin_config = IsobinConfig::get_need_install_config(
-            &specified_isobin_config,
-            &isobin_config_cache,
+        let install_target_isobin_manifest = IsobinManifest::get_need_install_config(
+            &specified_isobin_manifest,
+            &isobin_manifest_cache,
             &tmp_workspace,
         )
         .await?;
 
-        let save_isobin_config =
-            IsobinConfig::merge(&isobin_config_cache, &specified_isobin_config);
+        let save_isobin_manifest =
+            IsobinManifest::merge(&isobin_manifest_cache, &specified_isobin_manifest);
 
         self.run_install(
             &workspace,
             &tmp_workspace,
-            &save_isobin_config,
-            &specified_isobin_config,
-            &install_target_isobin_config,
-            &IsobinConfig::default(),
+            &save_isobin_manifest,
+            &specified_isobin_manifest,
+            &install_target_isobin_manifest,
+            &IsobinManifest::default(),
         )
         .await
     }
@@ -89,22 +90,23 @@ impl InstallService {
         &self,
         workspace: &Workspace,
         tmp_workspace: &Workspace,
-        save_isobin_config: &IsobinConfig,
-        specified_isobin_config: &IsobinConfig,
-        install_target_isobin_config: &IsobinConfig,
-        uninstall_target_isobin_config: &IsobinConfig,
+        save_isobin_manifest: &IsobinManifest,
+        specified_isobin_manifest: &IsobinManifest,
+        install_target_isobin_manifest: &IsobinManifest,
+        uninstall_target_isobin_manifest: &IsobinManifest,
     ) -> Result<()> {
         fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir()).await?;
-        IsobinConfigCache::save_cache_to_dir(save_isobin_config, tmp_workspace.base_dir()).await?;
+        IsobinConfigCache::save_cache_to_dir(save_isobin_manifest, tmp_workspace.base_dir())
+            .await?;
 
         let cargo_installer_factory = CargoInstallerFactory::new(tmp_workspace.clone());
         let install_runner_provider = InstallRunnerProvider::default();
         let cargo_runner = install_runner_provider
             .make_cargo_runner(
                 &cargo_installer_factory,
-                specified_isobin_config.cargo(),
-                install_target_isobin_config.cargo(),
-                uninstall_target_isobin_config.cargo(),
+                specified_isobin_manifest.cargo(),
+                install_target_isobin_manifest.cargo(),
+                uninstall_target_isobin_manifest.cargo(),
             )
             .await?;
         self.run_each_installs(workspace, tmp_workspace, vec![cargo_runner])
@@ -365,23 +367,24 @@ impl<
 pub struct InstallServiceOption {
     force: bool,
     mode: InstallMode,
-    isobin_config_path: Option<PathBuf>,
+    isobin_manifest_path: Option<PathBuf>,
 }
 
 #[derive(Getters)]
 pub struct FixedInstallServiceOption {
     force: bool,
     mode: InstallMode,
-    isobin_config_path: PathBuf,
+    isobin_manifest_path: PathBuf,
 }
 
 impl InstallServiceOption {
     pub async fn fix(self) -> Result<FixedInstallServiceOption> {
-        let isobin_config_path = isobin_config_path_canonicalize(self.isobin_config_path).await?;
+        let isobin_manifest_path =
+            isobin_manifest_path_canonicalize(self.isobin_manifest_path).await?;
         Ok(FixedInstallServiceOption {
             force: self.force,
             mode: self.mode,
-            isobin_config_path,
+            isobin_manifest_path,
         })
     }
 }
@@ -390,7 +393,7 @@ impl InstallServiceOption {
 pub struct InstallServiceOptionBuilder {
     force: bool,
     mode: Option<InstallMode>,
-    isobin_config_path: Option<PathBuf>,
+    isobin_manifest_path: Option<PathBuf>,
 }
 
 impl InstallServiceOptionBuilder {
@@ -402,8 +405,8 @@ impl InstallServiceOptionBuilder {
         self.force = force;
         self
     }
-    pub fn isobin_config_path(mut self, isobin_config_path: PathBuf) -> Self {
-        self.isobin_config_path = Some(isobin_config_path);
+    pub fn isobin_manifest_path(mut self, isobin_manifest_path: PathBuf) -> Self {
+        self.isobin_manifest_path = Some(isobin_manifest_path);
         self
     }
 
@@ -411,7 +414,7 @@ impl InstallServiceOptionBuilder {
         InstallServiceOption {
             force: self.force,
             mode: self.mode.unwrap_or(InstallMode::All),
-            isobin_config_path: self.isobin_config_path,
+            isobin_manifest_path: self.isobin_manifest_path,
         }
     }
 }

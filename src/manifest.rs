@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    paths::{isobin_config::IsobinConfigPathError, workspace::Workspace},
+    paths::{isobin_manifest::IsobinManifestPathError, workspace::Workspace},
     providers::ProviderKind,
     utils::{
         fs_ext, io_ext,
@@ -14,7 +14,7 @@ use serde_derive::{Deserialize, Serialize};
 use tokio::{fs, io::AsyncWriteExt};
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Getters, Default, new)]
-pub struct IsobinConfig {
+pub struct IsobinManifest {
     #[serde(default)]
     cargo: CargoConfig,
 }
@@ -37,14 +37,14 @@ pub enum IsobinConfigError {
     MultiValidate(Vec<Error>),
 }
 
-impl IsobinConfig {
-    pub async fn load_from_file(path: impl AsRef<Path>) -> Result<IsobinConfig> {
+impl IsobinManifest {
+    pub async fn load_from_file(path: impl AsRef<Path>) -> Result<IsobinManifest> {
         let file_extension = Self::get_file_extension(path.as_ref())?;
         let mut isobin_config = Self::parse(file_extension, path.as_ref()).await?;
         let isobin_config_dir = path
             .as_ref()
             .parent()
-            .ok_or_else(IsobinConfigPathError::new_not_found_isobin_config)?;
+            .ok_or_else(IsobinManifestPathError::new_not_found_isobin_manifest)?;
 
         isobin_config.fix(isobin_config_dir);
         isobin_config.validate()?;
@@ -93,7 +93,7 @@ impl IsobinConfig {
     async fn parse(
         file_extension: ConfigFileExtensions,
         path: impl AsRef<Path>,
-    ) -> Result<IsobinConfig> {
+    ) -> Result<IsobinManifest> {
         match file_extension {
             ConfigFileExtensions::Toml => Ok(Toml::parse_from_file(path).await?),
             ConfigFileExtensions::Yaml => Ok(Yaml::parse_from_file(path).await?),
@@ -127,20 +127,20 @@ impl IsobinConfigCache {
         dir.as_ref().join(Self::ISOBIN_CONFIG_FILE_CACHE_NAME)
     }
 
-    pub async fn lenient_load_cache_from_dir(dir: impl AsRef<Path>) -> IsobinConfig {
+    pub async fn lenient_load_cache_from_dir(dir: impl AsRef<Path>) -> IsobinManifest {
         let cache_file_path = Self::make_cache_path(dir);
         if cache_file_path.exists() {
             match Self::load_cache_from_path(cache_file_path).await {
                 Ok(cache) => cache,
-                Err(_) => IsobinConfig::default(),
+                Err(_) => IsobinManifest::default(),
             }
         } else {
-            IsobinConfig::default()
+            IsobinManifest::default()
         }
     }
 
     pub async fn save_cache_to_dir(
-        isobin_config: &IsobinConfig,
+        isobin_config: &IsobinManifest,
         dir: impl AsRef<Path>,
     ) -> Result<()> {
         let cache_file_path = Self::make_cache_path(dir);
@@ -152,7 +152,7 @@ impl IsobinConfigCache {
             .await?;
         Ok(())
     }
-    async fn load_cache_from_path(cache_file_path: impl AsRef<Path>) -> Result<IsobinConfig> {
+    async fn load_cache_from_path(cache_file_path: impl AsRef<Path>) -> Result<IsobinManifest> {
         let data = fs::read(cache_file_path).await?;
         Ok(serde_json::from_slice(&data)?)
     }
@@ -175,9 +175,11 @@ mod tests {
         tool_config(cargo_install_dependencies())
     )]
     #[tokio::test]
-    async fn isobin_config_from_path_works(#[case] path: &str, #[case] expected: IsobinConfig) {
+    async fn isobin_config_from_path_works(#[case] path: &str, #[case] expected: IsobinManifest) {
         let dir = current_source_dir!();
-        let actual = IsobinConfig::load_from_file(dir.join(path)).await.unwrap();
+        let actual = IsobinManifest::load_from_file(dir.join(path))
+            .await
+            .unwrap();
         pretty_assertions::assert_eq!(expected, actual);
     }
 
@@ -196,10 +198,10 @@ mod tests {
     async fn isobin_config_from_str_works(
         #[case] ft: ConfigFileExtensions,
         #[case] path: impl AsRef<Path>,
-        #[case] expected: IsobinConfig,
+        #[case] expected: IsobinManifest,
     ) {
         let path = current_source_dir!().join(path);
-        let actual = IsobinConfig::parse(ft, path).await.unwrap();
+        let actual = IsobinManifest::parse(ft, path).await.unwrap();
         pretty_assertions::assert_eq!(expected, actual);
     }
 
@@ -243,7 +245,7 @@ mod tests {
         #[case] expected: SerdeExtError,
     ) {
         let path = current_source_dir!().join(path);
-        let result = IsobinConfig::parse(ft, path).await;
+        let result = IsobinManifest::parse(ft, path).await;
         assert_error_result!(expected, result);
     }
 
@@ -267,8 +269,8 @@ mod tests {
     #[fixture]
     fn tool_config(
         cargo_install_dependencies: Vec<(String, CargoInstallDependency)>,
-    ) -> IsobinConfig {
-        IsobinConfig {
+    ) -> IsobinManifest {
+        IsobinManifest {
             cargo: CargoConfig::new(cargo_install_dependencies.into_iter().collect()),
         }
     }
@@ -327,7 +329,7 @@ mod tests {
     #[case("foo.yml", ConfigFileExtensions::Yaml)]
     #[case("foo.toml", ConfigFileExtensions::Toml)]
     fn get_config_file_extension_works(#[case] path: &str, #[case] expected: ConfigFileExtensions) {
-        let actual = IsobinConfig::get_file_extension(path).unwrap();
+        let actual = IsobinManifest::get_file_extension(path).unwrap();
         pretty_assertions::assert_eq!(expected, actual);
     }
 
@@ -338,7 +340,7 @@ mod tests {
         #[case] path: &str,
         #[case] expected: IsobinConfigError,
     ) {
-        let result = IsobinConfig::get_file_extension(path);
+        let result = IsobinManifest::get_file_extension(path);
         assert_error_result!(expected, result);
     }
 }
