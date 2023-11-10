@@ -49,7 +49,7 @@ impl WorkspaceProvider {
         isobin_manifest_dir: impl AsRef<Path>,
     ) -> Result<Workspace> {
         let mut workspace_path_map =
-            WorkspacePathMap::parse_from_config_dir(self.project.config_dir()).await?;
+            WorkspacePathMap::parse_from_dir(self.project.data_local_dir()).await?;
         let id = if let Some(id) = workspace_path_map
             .workspace_path_map
             .get(isobin_manifest_dir.as_ref().to_str().unwrap())
@@ -61,7 +61,7 @@ impl WorkspaceProvider {
                 isobin_manifest_dir.as_ref().to_str().unwrap().into(),
                 id.to_string(),
             );
-            WorkspacePathMap::save_to_config_dir(&workspace_path_map, self.project.config_dir())
+            WorkspacePathMap::save_to_dir(&workspace_path_map, self.project.data_local_dir())
                 .await?;
             id
         };
@@ -83,9 +83,8 @@ struct WorkspacePathMap {
 
 impl WorkspacePathMap {
     const WORKSPACE_PATH_MAP_FILE_NAME: &'static str = "workspace_map.v1.json";
-    async fn parse_from_config_dir(config_dir: impl AsRef<Path>) -> Result<WorkspacePathMap> {
-        let workspace_path_map_file_path =
-            config_dir.as_ref().join(Self::WORKSPACE_PATH_MAP_FILE_NAME);
+    async fn parse_from_dir(dir: impl AsRef<Path>) -> Result<WorkspacePathMap> {
+        let workspace_path_map_file_path = dir.as_ref().join(Self::WORKSPACE_PATH_MAP_FILE_NAME);
         if workspace_path_map_file_path.exists() {
             Ok(Json::parse_from_file(workspace_path_map_file_path).await?)
         } else {
@@ -93,12 +92,8 @@ impl WorkspacePathMap {
         }
     }
 
-    async fn save_to_config_dir(
-        workspace_path_map: &Self,
-        config_dir: impl AsRef<Path>,
-    ) -> Result<()> {
-        let workspace_path_map_file_path =
-            config_dir.as_ref().join(Self::WORKSPACE_PATH_MAP_FILE_NAME);
+    async fn save_to_dir(workspace_path_map: &Self, dir: impl AsRef<Path>) -> Result<()> {
+        let workspace_path_map_file_path = dir.as_ref().join(Self::WORKSPACE_PATH_MAP_FILE_NAME);
         Json::save_to_file(workspace_path_map, workspace_path_map_file_path).await
     }
 }
