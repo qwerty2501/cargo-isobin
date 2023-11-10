@@ -27,20 +27,21 @@ impl Application {
                 force,
                 install_targets,
             } => {
-                self.install(args.manifest_path, force, install_targets)
+                self.install(args.manifest_path, args.quiet, force, install_targets)
                     .await
             }
-            SubCommands::Path => self.path(args.manifest_path).await,
+            SubCommands::Path => self.path(args.manifest_path, args.quiet).await,
         }
     }
     async fn install(
         &self,
         isobin_manifest_path: Option<PathBuf>,
+        quiet: bool,
         force: bool,
         install_targets: Option<Vec<String>>,
     ) -> Result<()> {
-        eprintln!("Start instllations.");
         let install_service_option_builder = InstallServiceOptionBuilder::default()
+            .quiet(quiet)
             .mode(if let Some(install_targets) = install_targets {
                 InstallMode::SpecificInstallTargetsOnly {
                     specific_install_targets: install_targets,
@@ -57,11 +58,10 @@ impl Application {
             };
 
         install(install_service_option_builder.build()).await?;
-        eprintln!("Completed instllations.");
         Ok(())
     }
-    async fn path(&self, isobin_manifest_path: Option<PathBuf>) -> Result<()> {
-        let path_service_option_builder = PathServiceOptionBuilder::default();
+    async fn path(&self, isobin_manifest_path: Option<PathBuf>, quiet: bool) -> Result<()> {
+        let path_service_option_builder = PathServiceOptionBuilder::default().quiet(quiet);
         let path_service_option_builder = if let Some(isobin_manifest_path) = isobin_manifest_path {
             path_service_option_builder.isobin_manifest_path(isobin_manifest_path)
         } else {
@@ -76,9 +76,11 @@ impl Application {
 #[derive(Parser)]
 #[command(author, version, about)]
 pub struct Arguments {
-    /// Sets a custom config file
+    /// Sets a custom manifest file
     #[arg(long, value_name = "PATH")]
     manifest_path: Option<PathBuf>,
+    #[arg(long, short, default_value_t = false)]
+    quiet: bool,
     #[command(subcommand)]
     subcommand: SubCommands,
 }

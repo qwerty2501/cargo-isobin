@@ -35,7 +35,10 @@ pub struct InstallService {
 }
 
 impl InstallService {
-    pub async fn install(&self, install_service_option: InstallServiceOption) -> Result<()> {
+    pub async fn install<MP: MultiProgress>(
+        &self,
+        install_service_option: InstallServiceOption,
+    ) -> Result<()> {
         let install_service_option = install_service_option.fix().await?;
         let isobin_manifest =
             IsobinManifest::load_from_file(install_service_option.isobin_manifest_path()).await?;
@@ -75,7 +78,7 @@ impl InstallService {
         let save_isobin_manifest =
             IsobinManifest::merge(&isobin_manifest_cache, &specified_isobin_manifest);
 
-        self.run_install(
+        self.run_install::<MP>(
             &workspace,
             &tmp_workspace,
             &save_isobin_manifest,
@@ -86,7 +89,7 @@ impl InstallService {
         .await
     }
 
-    async fn run_install(
+    async fn run_install<MP: MultiProgress>(
         &self,
         workspace: &Workspace,
         tmp_workspace: &Workspace,
@@ -100,7 +103,7 @@ impl InstallService {
             .await?;
 
         let cargo_installer_factory = CargoInstallerFactory::new(tmp_workspace.clone());
-        let install_runner_provider = InstallRunnerProvider::default();
+        let install_runner_provider = InstallRunnerProvider::<MP>::default();
         let cargo_runner = install_runner_provider
             .make_cargo_runner(
                 &cargo_installer_factory,
@@ -174,17 +177,17 @@ impl InstallService {
 }
 
 #[derive(Getters, new, Clone)]
-struct InstallTargetContext<IF: InstallTarget + Clone> {
+struct InstallTargetContext<IF: InstallTarget + Clone, P: Progress> {
     target: IF,
-    progress: Progress,
+    progress: P,
 }
 
 #[derive(Default)]
-pub struct InstallRunnerProvider {
-    multi_progress: MultiProgress,
+pub struct InstallRunnerProvider<MP: MultiProgress> {
+    multi_progress: MP,
 }
 
-impl InstallRunnerProvider {
+impl<MP: MultiProgress> InstallRunnerProvider<MP> {
     pub async fn make_cargo_runner(
         &self,
         cargo_installer: &CargoInstallerFactory,
@@ -246,17 +249,19 @@ struct InstallRunnerImpl<
     IT: providers::InstallTarget,
     CI: providers::CoreInstaller<InstallTarget = IT>,
     BI: providers::BinPathInstaller<InstallTarget = IT>,
+    P: Progress,
 > {
     core_installer: CI,
     bin_path_installer: BI,
-    contexts: Vec<InstallTargetContext<IT>>,
+    contexts: Vec<InstallTargetContext<IT, P>>,
 }
 
 impl<
         IT: providers::InstallTarget,
         CI: providers::CoreInstaller<InstallTarget = IT>,
         BI: providers::BinPathInstaller<InstallTarget = IT>,
-    > InstallRunnerImpl<IT, CI, BI>
+        P: Progress,
+    > InstallRunnerImpl<IT, CI, BI, P>
 {
     async fn run_sequential_installs(&self) -> Result<()> {
         for context in self.contexts.iter() {
@@ -284,7 +289,7 @@ impl<
     async fn install(
         core_installer: CI,
         bin_path_installer: BI,
-        install_context: InstallTargetContext<IT>,
+        install_context: InstallTargetContext<IT, P>,
     ) -> Result<()> {
         let progress = install_context.progress();
         let target = install_context.target();
@@ -329,7 +334,8 @@ impl<
         IT: providers::InstallTarget,
         CI: providers::CoreInstaller<InstallTarget = IT>,
         BI: providers::BinPathInstaller<InstallTarget = IT>,
-    > InstallRunner for InstallRunnerImpl<IT, CI, BI>
+        P: Progress,
+    > InstallRunner for InstallRunnerImpl<IT, CI, BI, P>
 {
     fn provider_type(&self) -> providers::ProviderKind {
         self.core_installer.provider_kind()
@@ -365,6 +371,7 @@ impl<
 
 #[derive(Getters)]
 pub struct InstallServiceOption {
+    quiet: bool,
     force: bool,
     mode: InstallMode,
     isobin_manifest_path: Option<PathBuf>,
@@ -372,6 +379,7 @@ pub struct InstallServiceOption {
 
 #[derive(Getters)]
 pub struct FixedInstallServiceOption {
+    quiet: bool,
     force: bool,
     mode: InstallMode,
     isobin_manifest_path: PathBuf,
@@ -382,6 +390,7 @@ impl InstallServiceOption {
         let isobin_manifest_path =
             isobin_manifest_path_canonicalize(self.isobin_manifest_path).await?;
         Ok(FixedInstallServiceOption {
+            quiet: self.quiet,
             force: self.force,
             mode: self.mode,
             isobin_manifest_path,
@@ -391,6 +400,7 @@ impl InstallServiceOption {
 
 #[derive(Default)]
 pub struct InstallServiceOptionBuilder {
+    quiet: bool,
     force: bool,
     mode: Option<InstallMode>,
     isobin_manifest_path: Option<PathBuf>,
@@ -401,6 +411,11 @@ impl InstallServiceOptionBuilder {
         self.mode = Some(mode);
         self
     }
+    pub fn quiet(mut self, quiet: bool) -> Self {
+        self.quiet = quiet;
+        self
+    }
+
     pub fn force(mut self, force: bool) -> Self {
         self.force = force;
         self
@@ -412,6 +427,7 @@ impl InstallServiceOptionBuilder {
 
     pub fn build(self) -> InstallServiceOption {
         InstallServiceOption {
+            quiet: self.quiet,
             force: self.force,
             mode: self.mode.unwrap_or(InstallMode::All),
             isobin_manifest_path: self.isobin_manifest_path,

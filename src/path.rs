@@ -27,6 +27,7 @@ impl PathService {
 
 #[derive(Getters)]
 pub struct PathServiceOption {
+    quiet: bool,
     isobin_manifest_path: Option<PathBuf>,
 }
 
@@ -35,6 +36,7 @@ impl PathServiceOption {
         let isobin_manifest_path =
             isobin_manifest_path_canonicalize(self.isobin_manifest_path).await?;
         Ok(FixedPathServiceOption {
+            quiet: self.quiet,
             isobin_manifest_path,
         })
     }
@@ -42,11 +44,13 @@ impl PathServiceOption {
 
 #[derive(Getters)]
 pub struct FixedPathServiceOption {
+    quiet: bool,
     isobin_manifest_path: PathBuf,
 }
 
 #[derive(Default)]
 pub struct PathServiceOptionBuilder {
+    quiet: bool,
     isobin_manifest_path: Option<PathBuf>,
 }
 
@@ -55,8 +59,13 @@ impl PathServiceOptionBuilder {
         self.isobin_manifest_path = Some(isobin_manifest_path);
         self
     }
+    pub fn quiet(mut self, quiet: bool) -> Self {
+        self.quiet = quiet;
+        self
+    }
     pub fn build(self) -> PathServiceOption {
         PathServiceOption {
+            quiet: self.quiet,
             isobin_manifest_path: self.isobin_manifest_path,
         }
     }

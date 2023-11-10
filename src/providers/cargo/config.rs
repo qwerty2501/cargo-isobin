@@ -12,7 +12,7 @@ use crate::{
     paths::workspace::Workspace,
     providers::ProviderKind,
     utils::file_modified::{has_file_diff_in_dir, FILE_MODIFIED_CACHE_MAP_FILE_NAME},
-    IsobinConfigError, Result,
+    IsobinManifestError, Result,
 };
 
 use super::home::CargoWorkspace;
@@ -101,12 +101,12 @@ impl CargoConfig {
             .iter()
             .map(|(name, install)| match install.validate() {
                 Ok(_) => Ok(()),
-                Err(err) => {
-                    Err(
-                        IsobinConfigError::new_validate(ProviderKind::Cargo, name.to_string(), err)
-                            .into(),
-                    )
-                }
+                Err(err) => Err(IsobinManifestError::new_validate(
+                    ProviderKind::Cargo,
+                    name.to_string(),
+                    err,
+                )
+                .into()),
             })
             .filter(|r| r.is_err())
             .map(|r| r.unwrap_err())
@@ -114,7 +114,7 @@ impl CargoConfig {
         if errs.is_empty() {
             Ok(())
         } else {
-            Err(IsobinConfigError::MultiValidate(errs).into())
+            Err(IsobinManifestError::MultiValidate(errs).into())
         }
     }
     pub fn fix(&mut self, isobin_config_dir: &Path) {

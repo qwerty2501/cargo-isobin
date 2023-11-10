@@ -1,3 +1,21 @@
-mod console;
+pub mod console;
+pub mod quiet;
 
-pub use console::*;
+use crate::providers::InstallTarget;
+use crate::Result;
+pub use console::print_error;
+
+pub trait MultiProgress: Clone + 'static + Send + Sync + Default {
+    type Progress: Progress;
+    fn make_progress(&self, install_target: &impl InstallTarget) -> Self::Progress;
+}
+pub trait Progress: Clone + 'static + Send + Sync {
+    fn prepare_install(&self) -> Result<()>;
+    fn already_installed(&self) -> Result<()>;
+    fn start_uninstall(&self) -> Result<()>;
+    fn start_install(&self) -> Result<()>;
+    fn done_install(&self) -> Result<()>;
+    fn done_uninstall(&self) -> Result<()>;
+    fn failed_install(&self) -> Result<()>;
+    fn failed_uninstall(&self) -> Result<()>;
+}

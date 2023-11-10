@@ -1,9 +1,7 @@
 use colored::Colorize;
 
-use crate::{Error, InstallServiceError, IsobinConfigError};
+use crate::{Error, InstallServiceError, IsobinManifestError};
 pub fn print_error(err: &Error) {
-    eprintln!();
-    eprintln!();
     match err.downcast_ref::<InstallServiceError>() {
         Some(InstallServiceError::MultiInstall(errs)) => {
             for err in errs.iter() {
@@ -19,13 +17,13 @@ pub fn print_error(err: &Error) {
             eprintln!("An error occurred in {provider}/{name}.");
             eprintln!("{}", error_message.red());
         }
-        _ => match err.downcast_ref::<IsobinConfigError>() {
-            Some(IsobinConfigError::MultiValidate(errs)) => {
+        _ => match err.downcast_ref::<IsobinManifestError>() {
+            Some(IsobinManifestError::MultiValidate(errs)) => {
                 for err in errs.iter() {
                     print_error(err);
                 }
             }
-            Some(IsobinConfigError::Validate {
+            Some(IsobinManifestError::Validate {
                 provider,
                 name,
                 error,

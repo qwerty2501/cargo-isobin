@@ -51,3 +51,12 @@ macro_rules! join_futures {
         }
     }};
 }
+
+#[macro_export]
+macro_rules! flex_eprintln{
+    ($quiet:expr,$($arg:tt)*) =>{{
+        if !$quiet {
+            eprintln!($($arg)*);
+        }
+    }};
+}

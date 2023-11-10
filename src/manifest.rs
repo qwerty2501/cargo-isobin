@@ -20,7 +20,7 @@ pub struct IsobinManifest {
 }
 
 #[derive(thiserror::Error, Debug, new)]
-pub enum IsobinConfigError {
+pub enum IsobinManifestError {
     #[error("The target file does not have extension\npath:{path}")]
     NothingFileExtension { path: String },
 
@@ -57,7 +57,9 @@ impl IsobinManifest {
             .extension()
             .and_then(|ext| ext.to_str())
             .ok_or_else(|| {
-                IsobinConfigError::new_nothing_file_extension(io_ext::path_to_string(path.as_ref()))
+                IsobinManifestError::new_nothing_file_extension(io_ext::path_to_string(
+                    path.as_ref(),
+                ))
             })?;
 
         const TOML_EXTENSION: &str = "toml";
@@ -68,7 +70,7 @@ impl IsobinManifest {
             TOML_EXTENSION => Ok(ConfigFileExtensions::Toml),
             YML_EXTENSION | YAML_EXTENSION => Ok(ConfigFileExtensions::Yaml),
             JSON_EXTENSION => Ok(ConfigFileExtensions::Json),
-            _ => Err(IsobinConfigError::new_unknown_file_extension(
+            _ => Err(IsobinManifestError::new_unknown_file_extension(
                 io_ext::path_to_string(path.as_ref()),
                 extension.to_string(),
             )
@@ -334,11 +336,11 @@ mod tests {
     }
 
     #[rstest]
-    #[case("foo.fm", IsobinConfigError::new_unknown_file_extension("foo.fm".into(), "fm".into()))]
-    #[case("foo", IsobinConfigError::new_nothing_file_extension("foo".into()))]
+    #[case("foo.fm", IsobinManifestError::new_unknown_file_extension("foo.fm".into(), "fm".into()))]
+    #[case("foo", IsobinManifestError::new_nothing_file_extension("foo".into()))]
     fn get_config_file_extension_error_works(
         #[case] path: &str,
-        #[case] expected: IsobinConfigError,
+        #[case] expected: IsobinManifestError,
     ) {
         let result = IsobinManifest::get_file_extension(path);
         assert_error_result!(expected, result);
