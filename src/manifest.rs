@@ -105,18 +105,25 @@ impl IsobinManifest {
             ManifestFileExtensions::Json => Ok(Json::parse_from_file(path).await?),
         }
     }
-    pub async fn get_need_dependency_manifest(
+    pub async fn get_need_install_dependency_manifest(
         base: &Self,
         old: &Self,
         workspace: &Workspace,
     ) -> Result<Self> {
         Ok(Self {
-            cargo: CargoManifest::get_need_dependency_manifest(
+            cargo: CargoManifest::get_need_install_dependency_manifest(
                 base.cargo(),
                 old.cargo(),
                 workspace,
             )
             .await?,
+        })
+    }
+
+    pub async fn get_need_uninstall_dependency_manifest(base: &Self, old: &Self) -> Result<Self> {
+        Ok(Self {
+            cargo: CargoManifest::get_need_uninstall_dependency_manifest(base.cargo(), old.cargo())
+                .await?,
         })
     }
 }

@@ -1,6 +1,6 @@
 use colored::Colorize;
 
-use crate::{Error, InstallServiceError, IsobinManifestError};
+use crate::{install::InstallServiceError, Error, IsobinManifestError};
 pub fn print_error(err: &Error) {
     match err.downcast_ref::<InstallServiceError>() {
         Some(InstallServiceError::MultiInstall(errs)) => {

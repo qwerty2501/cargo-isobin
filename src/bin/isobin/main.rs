@@ -7,7 +7,7 @@ async fn main() {
     let app = Application;
 
     let args = Arguments::parse();
-    let result = app.exec(args).await;
+    let result = app.run(args).await;
     match result {
         Ok(()) => {}
         Err(err) => {
@@ -20,7 +20,7 @@ async fn main() {
 pub struct Application;
 
 impl Application {
-    pub async fn exec(&self, args: Arguments) -> Result<()> {
+    pub async fn run(&self, args: Arguments) -> Result<()> {
         let subcommand = args.subcommand;
         match subcommand {
             SubCommands::Install {
@@ -31,6 +31,7 @@ impl Application {
                     .await
             }
             SubCommands::Path => self.path(args.manifest_path, args.quiet).await,
+            SubCommands::Sync { force } => self.sync(args.manifest_path, args.quiet, force).await,
         }
     }
     async fn install(
@@ -57,8 +58,7 @@ impl Application {
                 install_service_option_builder
             };
 
-        install(install_service_option_builder.build()).await?;
-        Ok(())
+        install(install_service_option_builder.build()).await
     }
     async fn path(&self, isobin_manifest_path: Option<PathBuf>, quiet: bool) -> Result<()> {
         let path_service_option_builder = PathServiceOptionBuilder::default().quiet(quiet);
@@ -70,6 +70,23 @@ impl Application {
         let path = path(path_service_option_builder.build()).await?;
         println!("{}", path.display());
         Ok(())
+    }
+
+    async fn sync(
+        &self,
+        isobin_manifest_path: Option<PathBuf>,
+        quiet: bool,
+        force: bool,
+    ) -> Result<()> {
+        let sync_service_option_builder = SyncServiceOptionBuilder::default()
+            .quiet(quiet)
+            .force(force);
+        let sync_service_option_builder = if let Some(isobin_manifest_path) = isobin_manifest_path {
+            sync_service_option_builder.isobin_manifest_path(isobin_manifest_path)
+        } else {
+            sync_service_option_builder
+        };
+        sync(sync_service_option_builder.build()).await
     }
 }
 
@@ -93,4 +110,8 @@ pub enum SubCommands {
         install_targets: Option<Vec<String>>,
     },
     Path,
+    Sync {
+        #[arg(short, long, default_value_t = false)]
+        force: bool,
+    },
 }

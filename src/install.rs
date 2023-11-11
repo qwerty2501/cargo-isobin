@@ -66,7 +66,7 @@ impl InstallService {
                 specific_install_targets,
             } => isobin_manifest.filter_target(specific_install_targets),
         };
-        let install_target_isobin_manifest = IsobinManifest::get_need_dependency_manifest(
+        let install_target_isobin_manifest = IsobinManifest::get_need_install_dependency_manifest(
             &specified_isobin_manifest,
             &isobin_manifest_cache,
             &tmp_workspace,
@@ -415,20 +415,15 @@ impl<
 }
 
 #[derive(Getters)]
-pub struct InstallServiceOption {
+pub struct InstallServiceOptionBase<P> {
     quiet: bool,
     force: bool,
     mode: InstallMode,
-    isobin_manifest_path: Option<PathBuf>,
+    isobin_manifest_path: P,
 }
 
-#[derive(Getters)]
-pub struct FixedInstallServiceOption {
-    quiet: bool,
-    force: bool,
-    mode: InstallMode,
-    isobin_manifest_path: PathBuf,
-}
+pub type InstallServiceOption = InstallServiceOptionBase<Option<PathBuf>>;
+pub type FixedInstallServiceOption = InstallServiceOptionBase<PathBuf>;
 
 impl InstallServiceOption {
     pub async fn fix(self) -> Result<FixedInstallServiceOption> {

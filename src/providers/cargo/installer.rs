@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use tokio::{fs, process::Command};
 
 use crate::{
+    install::InstallServiceError,
     paths::workspace::Workspace,
     utils::{
         command_ext::{run_commnad, RunCommandError},

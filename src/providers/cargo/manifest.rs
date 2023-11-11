@@ -41,30 +41,43 @@ impl CargoManifest {
         Self::new(new_dependencies)
     }
 
-    pub async fn get_need_dependency_manifest(
+    pub async fn get_need_install_dependency_manifest(
         base: &Self,
         old: &Self,
         workspace: &Workspace,
     ) -> Result<Self> {
-        let mut new_cargo_config = Self::default();
+        let mut new_cargo_manifest = Self::default();
         let cargo_workspace = CargoWorkspace::from_workspace(workspace);
         for (name, dependency) in base.dependencies().iter() {
             if let Some(old_dependency) = old.dependencies().get(name) {
                 if dependency != old_dependency
                     || Self::check_need_build_in_path(name, dependency, &cargo_workspace).await?
                 {
-                    new_cargo_config
+                    new_cargo_manifest
                         .dependencies
                         .insert(name.to_string(), dependency.clone());
                 }
             } else {
-                new_cargo_config
+                new_cargo_manifest
                     .dependencies
                     .insert(name.to_string(), dependency.clone());
             }
         }
-        Ok(new_cargo_config)
+        Ok(new_cargo_manifest)
     }
+
+    pub async fn get_need_uninstall_dependency_manifest(base: &Self, old: &Self) -> Result<Self> {
+        let mut new_cargo_manifest = Self::default();
+        for (name, dependency) in old.dependencies().iter() {
+            if base.dependencies().get(name).is_none() {
+                new_cargo_manifest
+                    .dependencies
+                    .insert(name.to_string(), dependency.clone());
+            }
+        }
+        Ok(new_cargo_manifest)
+    }
+
     async fn check_need_build_in_path(
         name: &str,
         dependency: &CargoInstallDependency,
