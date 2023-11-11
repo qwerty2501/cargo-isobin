@@ -206,7 +206,7 @@ impl InstallService {
                 }
             }
             if need_tmp {
-                fs_ext::clean_dir(tmp_dir).await?
+                fs::remove_dir_all(tmp_dir).await?;
             }
             Ok(())
         }
