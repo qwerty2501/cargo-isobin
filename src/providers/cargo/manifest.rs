@@ -33,12 +33,21 @@ impl CargoManifest {
         Self::new(new_dependencies)
     }
 
-    pub fn merge(base_config: &Self, new_config: &Self) -> Self {
-        let mut new_dependencies = base_config.dependencies().clone();
-        for (name, dependency) in new_config.dependencies().iter() {
+    pub fn merge(base_manifest: &Self, new_manifest: &Self) -> Self {
+        let mut new_dependencies = base_manifest.dependencies().clone();
+        for (name, dependency) in new_manifest.dependencies().iter() {
             new_dependencies.insert(name.to_string(), dependency.clone());
         }
         Self::new(new_dependencies)
+    }
+    pub fn remove_targets(base_manifest: &Self, remove_target_manifest: &Self) -> Self {
+        let mut new_manifest = base_manifest.clone();
+        for name in base_manifest.dependencies().keys() {
+            if remove_target_manifest.dependencies().get(name).is_some() {
+                new_manifest.dependencies.remove(name);
+            }
+        }
+        new_manifest
     }
 
     pub async fn get_need_install_dependency_manifest(
@@ -130,10 +139,10 @@ impl CargoManifest {
             Err(IsobinManifestError::MultiValidate(errs).into())
         }
     }
-    pub fn fix(mut self, isobin_config_dir: &Path) -> Self {
+    pub fn fix(mut self, isobin_manifest_dir: &Path) -> Self {
         for (name, dependency) in self.dependencies.clone().into_iter() {
             self.dependencies
-                .insert(name, dependency.fix(isobin_config_dir));
+                .insert(name, dependency.fix(isobin_manifest_dir));
         }
         self
     }
@@ -155,10 +164,10 @@ impl CargoInstallDependency {
         }
     }
 
-    pub fn fix(self, isobin_config_dir: &Path) -> Self {
+    pub fn fix(self, isobin_manifest_dir: &Path) -> Self {
         match self {
             Self::Simple(_) => self,
-            Self::Detailed(dependency) => Self::Detailed(dependency.fix(isobin_config_dir)),
+            Self::Detailed(dependency) => Self::Detailed(dependency.fix(isobin_manifest_dir)),
         }
     }
 }
@@ -185,9 +194,9 @@ pub struct CargoInstallDependencyDetail {
 }
 
 impl CargoInstallDependencyDetail {
-    pub fn fix(mut self, isobin_config_dir: &Path) -> Self {
+    pub fn fix(mut self, isobin_manifest_dir: &Path) -> Self {
         if let Some(path) = &self.path {
-            self.absolute_path = Some(isobin_config_dir.join(path));
+            self.absolute_path = Some(isobin_manifest_dir.join(path));
         }
         self
     }

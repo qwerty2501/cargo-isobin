@@ -237,7 +237,7 @@ fn convert_deserialize_toml_error(
 
 async fn write_str_for_serialize(s: &str, path: impl AsRef<Path>) -> Result<()> {
     let path = path.as_ref();
-    let mut file = fs_ext::open_write_file_create_if_not_exists(path).await?;
+    let mut file = fs_ext::create_file_if_not_exists(path).await?;
     Ok(file
         .write_all(s.as_bytes())
         .await

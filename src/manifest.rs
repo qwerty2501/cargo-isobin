@@ -94,6 +94,12 @@ impl IsobinManifest {
             new_manifest.cargo(),
         ))
     }
+    pub fn remove_targets(base_manifest: &Self, remove_target_manifest: &Self) -> Self {
+        Self::new(CargoManifest::remove_targets(
+            base_manifest.cargo(),
+            remove_target_manifest.cargo(),
+        ))
+    }
 
     async fn parse(
         file_extension: ManifestFileExtensions,

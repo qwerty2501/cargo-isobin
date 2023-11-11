@@ -30,17 +30,17 @@ impl SyncService {
             .await?;
         let tmp_workspace = workspace.make_tmp_workspace();
 
+        if workspace.base_dir().exists() {
+            fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir()).await?;
+            copy_dir(
+                workspace.base_dir().clone(),
+                tmp_workspace.base_dir().clone(),
+            )
+            .await?;
+        }
         let isobin_manifest_cache = if sync_service_option.force {
             IsobinManifest::default()
         } else {
-            if workspace.base_dir().exists() {
-                fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir()).await?;
-                copy_dir(
-                    workspace.base_dir().clone(),
-                    tmp_workspace.base_dir().clone(),
-                )
-                .await?;
-            }
             IsobinManifestCache::lenient_load_cache_from_dir(tmp_workspace.base_dir()).await
         };
 
@@ -61,6 +61,10 @@ impl SyncService {
 
         let save_isobin_manifest =
             IsobinManifest::merge(&isobin_manifest_cache, &specified_isobin_manifest);
+        let save_isobin_manifest = IsobinManifest::remove_targets(
+            &save_isobin_manifest,
+            &uninstall_target_isobin_manifest,
+        );
 
         self.install_service
             .run_install(

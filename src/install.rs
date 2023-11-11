@@ -232,7 +232,7 @@ impl<MP: MultiProgress> InstallRunnerProvider<MP> {
         install_target_cargo_manifest: &CargoManifest,
         uninstall_target_cargo_manifest: &CargoManifest,
     ) -> Result<Arc<Mutex<dyn InstallRunner>>> {
-        let install_targets = specified_cargo_manifest
+        let mut install_targets = specified_cargo_manifest
             .dependencies()
             .iter()
             .map(|(name, install_dependency)| {
@@ -242,18 +242,26 @@ impl<MP: MultiProgress> InstallRunnerProvider<MP> {
                     .is_some()
                 {
                     InstallTargetMode::Install
-                } else if uninstall_target_cargo_manifest
-                    .dependencies()
-                    .get(name)
-                    .is_some()
-                {
-                    InstallTargetMode::Uninstall
                 } else {
                     InstallTargetMode::AlreadyInstalled
                 };
                 CargoInstallTarget::new(name.into(), install_dependency.clone(), mode)
             })
             .collect::<Vec<_>>();
+        install_targets.extend_from_slice(
+            &uninstall_target_cargo_manifest
+                .dependencies()
+                .iter()
+                .map(|(name, uninstall_dependency)| {
+                    CargoInstallTarget::new(
+                        name.into(),
+                        uninstall_dependency.clone(),
+                        InstallTargetMode::Uninstall,
+                    )
+                })
+                .collect::<Vec<_>>(),
+        );
+
         self.make_runner(cargo_installer, install_targets).await
     }
 
