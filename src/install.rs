@@ -8,9 +8,9 @@ use crate::paths::isobin_manifest::isobin_manifest_dir;
 use crate::paths::isobin_manifest::isobin_manifest_path_canonicalize;
 use crate::paths::workspace::Workspace;
 use crate::paths::workspace::WorkspaceProvider;
-use crate::providers::cargo::CargoConfig;
 use crate::providers::cargo::CargoInstallTarget;
 use crate::providers::cargo::CargoInstallerFactory;
+use crate::providers::cargo::CargoManifest;
 use crate::providers::InstallTarget;
 use crate::providers::InstallTargetMode;
 use crate::providers::ProviderKind;
@@ -69,7 +69,7 @@ impl InstallService {
                 specific_install_targets,
             } => isobin_manifest.filter_target(specific_install_targets),
         };
-        let install_target_isobin_manifest = IsobinManifest::get_need_install_config(
+        let install_target_isobin_manifest = IsobinManifest::get_need_install_manifest(
             &specified_isobin_manifest,
             &isobin_manifest_cache,
             &tmp_workspace,
@@ -192,17 +192,21 @@ impl<MP: MultiProgress> InstallRunnerProvider<MP> {
     pub async fn make_cargo_runner(
         &self,
         cargo_installer: &CargoInstallerFactory,
-        specified_cargo_config: &CargoConfig,
-        install_target_cargo_config: &CargoConfig,
-        uninstall_target_cargo_config: &CargoConfig,
+        specified_cargo_manifest: &CargoManifest,
+        install_target_cargo_manifest: &CargoManifest,
+        uninstall_target_cargo_manifest: &CargoManifest,
     ) -> Result<Arc<Mutex<dyn InstallRunner>>> {
-        let install_targets = specified_cargo_config
+        let install_targets = specified_cargo_manifest
             .installs()
             .iter()
             .map(|(name, install_dependency)| {
-                let mode = if install_target_cargo_config.installs().get(name).is_some() {
+                let mode = if install_target_cargo_manifest.installs().get(name).is_some() {
                     InstallTargetMode::Install
-                } else if uninstall_target_cargo_config.installs().get(name).is_some() {
+                } else if uninstall_target_cargo_manifest
+                    .installs()
+                    .get(name)
+                    .is_some()
+                {
                     InstallTargetMode::Uninstall
                 } else {
                     InstallTargetMode::AlreadyInstalled

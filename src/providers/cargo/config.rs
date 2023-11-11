@@ -17,12 +17,12 @@ use crate::{
 
 use super::home::CargoWorkspace;
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, new, Default, Getters)]
-pub struct CargoConfig {
+pub struct CargoManifest {
     #[serde(serialize_with = "toml::ser::tables_last")]
     installs: HashMap<String, CargoInstallDependency>,
 }
 
-impl CargoConfig {
+impl CargoManifest {
     pub fn filter_target(&self, targets: &[String]) -> Self {
         let mut new_installs = HashMap::default();
         for target in targets.iter() {
@@ -41,7 +41,7 @@ impl CargoConfig {
         Self::new(new_installs)
     }
 
-    pub async fn get_need_install_config(
+    pub async fn get_need_install_manifest(
         base: &Self,
         old: &Self,
         workspace: &Workspace,
