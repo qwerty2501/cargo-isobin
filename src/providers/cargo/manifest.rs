@@ -11,7 +11,9 @@ use tokio::fs;
 use crate::{
     paths::workspace::Workspace,
     providers::ProviderKind,
-    utils::file_modified::{has_file_diff_in_dir, FILE_MODIFIED_CACHE_MAP_FILE_NAME},
+    utils::file_modified::{
+        has_file_diff_in_dir, FileDiffHelpers, FILE_MODIFIED_CACHE_MAP_FILE_NAME,
+    },
     IsobinManifestError, Result,
 };
 
@@ -105,9 +107,12 @@ impl CargoManifest {
                     let modified_cache_map = serde_json::from_slice(&modified_cache_map_data)?;
                     has_file_diff_in_dir(
                         path,
-                        vec!["rs".into()],
-                        vec!["Cargo.toml".into(), "Cargo.lock".into()],
-                        vec![],
+                        FileDiffHelpers {
+                            target_exts: vec!["rs".into()],
+                            target_file_names: vec!["Cargo.toml".into(), "Cargo.lock".into()],
+                            exclude_file_names: vec![],
+                            exclude_dir_names: vec![".git".into(), "target".into()],
+                        },
                         modified_cache_map,
                     )
                     .await
