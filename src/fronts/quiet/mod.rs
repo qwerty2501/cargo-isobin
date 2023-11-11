@@ -2,6 +2,12 @@
 pub struct Progress;
 
 impl crate::fronts::Progress for Progress {
+    fn ready_uninstall(&self) -> crate::Result<()> {
+        Ok(())
+    }
+    fn ready_install(&self) -> crate::Result<()> {
+        Ok(())
+    }
     fn done_install(&self) -> crate::Result<()> {
         Ok(())
     }

@@ -207,6 +207,9 @@ impl InstallService {
             if need_tmp {
                 fs::remove_dir_all(tmp_dir).await?;
             }
+            for runner in runners.iter() {
+                runner.lock().await.done_contexts()?;
+            }
             Ok(())
         }
     }
@@ -294,6 +297,7 @@ pub trait InstallRunner: 'static + Sync + Send {
     async fn run_installs(&self) -> Result<()>;
     async fn bin_paths(&self) -> Result<Vec<PathBuf>>;
     async fn install_bin_path(&self) -> Result<()>;
+    fn done_contexts(&self) -> Result<()>;
 }
 
 #[derive(new)]
@@ -350,7 +354,7 @@ impl<
                 progress.start_install()?;
                 match core_installer.install(target).await {
                     Ok(_) => {
-                        progress.done_install()?;
+                        progress.ready_install()?;
                         Ok(())
                     }
                     Err(err) => {
@@ -364,7 +368,7 @@ impl<
                 progress.start_uninstall()?;
                 match Self::uninstall(core_installer, bin_path_installer, target).await {
                     Ok(_) => {
-                        progress.done_uninstall()?;
+                        progress.ready_uninstall()?;
                         Ok(())
                     }
                     Err(err) => {
@@ -389,6 +393,20 @@ impl<
         P: Progress,
     > InstallRunner for InstallRunnerImpl<IT, CI, BI, P>
 {
+    fn done_contexts(&self) -> Result<()> {
+        for context in self.contexts.iter() {
+            match context.target().mode() {
+                InstallTargetMode::Install => {
+                    context.progress().done_install()?;
+                }
+                InstallTargetMode::Uninstall => {
+                    context.progress().done_uninstall()?;
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
     fn provider_type(&self) -> providers::ProviderKind {
         self.core_installer.provider_kind()
     }

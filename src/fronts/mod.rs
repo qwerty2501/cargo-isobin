@@ -14,6 +14,8 @@ pub trait Progress: Clone + 'static + Send + Sync {
     fn already_installed(&self) -> Result<()>;
     fn start_uninstall(&self) -> Result<()>;
     fn start_install(&self) -> Result<()>;
+    fn ready_install(&self) -> Result<()>;
+    fn ready_uninstall(&self) -> Result<()>;
     fn done_install(&self) -> Result<()>;
     fn done_uninstall(&self) -> Result<()>;
     fn failed_install(&self) -> Result<()>;

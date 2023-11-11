@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{borrow::Cow, time::Duration};
 
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -26,12 +26,18 @@ impl Progress {
         }
     }
 
-    fn done(&self, prefix: impl AsRef<str>) -> Result<()> {
+    fn start(&self, prefix: impl Into<Cow<'static, str>>) -> Result<()> {
+        self.progress_bar
+            .enable_steady_tick(Duration::from_millis(100));
+        self.progress_bar.set_prefix(prefix);
+        Ok(())
+    }
+
+    fn done(&self, prefix: impl Into<Cow<'static, str>>) -> Result<()> {
         self.progress_bar.disable_steady_tick();
         self.progress_bar
             .set_style(ProgressStyle::with_template("  {prefix} {msg}")?);
-        self.progress_bar
-            .set_prefix(prefix.as_ref().green().to_string());
+        self.progress_bar.set_prefix(prefix.into());
         self.progress_bar.finish();
         Ok(())
     }
@@ -66,27 +72,26 @@ impl crate::fronts::Progress for Progress {
         ));
         Ok(())
     }
+    fn ready_install(&self) -> Result<()> {
+        self.done("ready install".green().to_string())
+    }
+    fn ready_uninstall(&self) -> Result<()> {
+        self.done("ready uninstall".yellow().to_string())
+    }
     fn done_install(&self) -> Result<()> {
-        self.done("done install")
+        self.done("done install".green().to_string())
     }
 
     fn done_uninstall(&self) -> Result<()> {
-        self.done("done uninstall")
+        self.done("done uninstall".yellow().to_string())
     }
 
     fn start_uninstall(&self) -> Result<()> {
-        self.progress_bar
-            .enable_steady_tick(Duration::from_millis(100));
-        self.progress_bar.set_prefix("uninstalling");
-        Ok(())
+        self.start("uninstalling".yellow().to_string())
     }
 
     fn start_install(&self) -> Result<()> {
-        self.progress_bar
-            .enable_steady_tick(Duration::from_millis(100));
-        self.progress_bar
-            .set_prefix("installing".magenta().to_string());
-        Ok(())
+        self.start("installing".magenta().to_string())
     }
 
     fn already_installed(&self) -> Result<()> {
