@@ -16,7 +16,6 @@ mod result;
 mod utils;
 pub use errors::*;
 pub use fronts::print_error;
-use fronts::{console, quiet};
 use install::*;
 pub use install::{InstallMode, InstallService, InstallServiceOption, InstallServiceOptionBuilder};
 pub use path::{PathService, PathServiceOption, PathServiceOptionBuilder};
@@ -31,15 +30,7 @@ pub async fn install(install_service_option: InstallServiceOption) -> Result<()>
     let install_service = InstallService::default();
     let quiet = *install_service_option.quiet();
     flex_eprintln!(quiet, "Start instllations.");
-    if quiet {
-        install_service
-            .install::<quiet::MultiProgress>(install_service_option)
-            .await?;
-    } else {
-        install_service
-            .install::<console::MultiProgress>(install_service_option)
-            .await?;
-    }
+    install_service.install(install_service_option).await?;
     flex_eprintln!(quiet, "Completed instllations.");
     Ok(())
 }

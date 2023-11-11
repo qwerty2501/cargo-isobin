@@ -36,10 +36,7 @@ pub struct InstallService {
 }
 
 impl InstallService {
-    pub async fn install<MP: MultiProgress>(
-        &self,
-        install_service_option: InstallServiceOption,
-    ) -> Result<()> {
+    pub async fn install(&self, install_service_option: InstallServiceOption) -> Result<()> {
         let install_service_option = install_service_option.fix().await?;
         let isobin_manifest =
             IsobinManifest::load_from_file(install_service_option.isobin_manifest_path()).await?;
@@ -79,18 +76,52 @@ impl InstallService {
         let save_isobin_manifest =
             IsobinManifest::merge(&isobin_manifest_cache, &specified_isobin_manifest);
 
-        self.run_install::<MP>(
+        self.run_install(
             &workspace,
             &tmp_workspace,
             &save_isobin_manifest,
             &specified_isobin_manifest,
             &install_target_isobin_manifest,
             &IsobinManifest::default(),
+            install_service_option.quiet,
         )
         .await
     }
 
-    async fn run_install<MP: MultiProgress>(
+    #[allow(clippy::too_many_arguments)]
+    pub async fn run_install(
+        &self,
+        workspace: &Workspace,
+        tmp_workspace: &Workspace,
+        save_isobin_manifest: &IsobinManifest,
+        specified_isobin_manifest: &IsobinManifest,
+        install_target_isobin_manifest: &IsobinManifest,
+        uninstall_target_isobin_manifest: &IsobinManifest,
+        quiet: bool,
+    ) -> Result<()> {
+        if quiet {
+            self.run_installs::<fronts::quiet::MultiProgress>(
+                workspace,
+                tmp_workspace,
+                save_isobin_manifest,
+                specified_isobin_manifest,
+                install_target_isobin_manifest,
+                uninstall_target_isobin_manifest,
+            )
+            .await
+        } else {
+            self.run_installs::<fronts::console::MultiProgress>(
+                workspace,
+                tmp_workspace,
+                save_isobin_manifest,
+                specified_isobin_manifest,
+                install_target_isobin_manifest,
+                uninstall_target_isobin_manifest,
+            )
+            .await
+        }
+    }
+    async fn run_installs<MP: MultiProgress>(
         &self,
         workspace: &Workspace,
         tmp_workspace: &Workspace,
