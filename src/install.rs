@@ -13,6 +13,7 @@ use crate::providers::cargo::CargoInstallTarget;
 use crate::providers::cargo::CargoInstallerFactory;
 use crate::providers::InstallTarget;
 use crate::providers::InstallTargetMode;
+use crate::providers::ProviderKind;
 use crate::utils::fs_ext;
 use crate::utils::fs_ext::copy_dir;
 use std::collections::HashSet;
@@ -442,7 +443,7 @@ pub enum InstallServiceError {
 
     #[error("{provider}/{name}:\n{error_message}")]
     Install {
-        provider: String,
+        provider: ProviderKind,
         name: String,
         error_message: String,
         error: Error,

@@ -108,6 +108,7 @@ impl providers::CoreInstaller for CargoCoreInstaller {
         let install_dir = self.cargo_workspace.cargo_home_dir().join(target.name());
         let mut command = Command::new(PROVIDER_NAME);
         let mut args: Vec<String> = vec![
+            "--quiet".into(),
             "install".into(),
             "--force".into(),
             "--root".into(),
@@ -125,33 +126,15 @@ impl providers::CoreInstaller for CargoCoreInstaller {
         run_commnad(command)
             .await
             .map_err(|err| match err.downcast::<RunCommandError>() {
-                Ok(err) => {
-                    let error_message = err
-                        .stderr()
-                        .lines()
-                        .filter(|line| line.matches("error").next().is_some())
-                        .fold(String::new(), |s, e| {
-                            if s.is_empty() {
-                                e.into()
-                            } else {
-                                [&s, e].join("\n")
-                            }
-                        });
-                    let error_message = if error_message.is_empty() {
-                        err.stderr().into()
-                    } else {
-                        error_message
-                    };
-                    InstallServiceError::new_install(
-                        PROVIDER_NAME.into(),
-                        target.name().into(),
-                        error_message,
-                        err.into(),
-                    )
-                    .into()
-                }
+                Ok(err) => InstallServiceError::new_install(
+                    ProviderKind::Cargo,
+                    target.name().into(),
+                    err.stderr().into(),
+                    err.into(),
+                )
+                .into(),
                 Err(err) => InstallServiceError::new_install(
-                    PROVIDER_NAME.into(),
+                    ProviderKind::Cargo,
                     target.name().into(),
                     err.to_string(),
                     err,
