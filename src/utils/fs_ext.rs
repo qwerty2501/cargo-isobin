@@ -14,7 +14,7 @@ pub async fn create_dir_if_not_exists(dir: impl AsRef<Path>) -> Result<()> {
     Ok(())
 }
 
-pub async fn open_file_create_if_not_exists(file_path: impl AsRef<Path>) -> Result<File> {
+pub async fn open_write_file_create_if_not_exists(file_path: impl AsRef<Path>) -> Result<File> {
     let file_path = file_path.as_ref();
     if let Some(dir) = file_path.parent() {
         create_dir_if_not_exists(dir).await?;
@@ -22,7 +22,7 @@ pub async fn open_file_create_if_not_exists(file_path: impl AsRef<Path>) -> Resu
     if !file_path.exists() {
         Ok(File::create(file_path).await?)
     } else {
-        Ok(File::open(file_path).await?)
+        Ok(fs::OpenOptions::new().write(true).open(file_path).await?)
     }
 }
 

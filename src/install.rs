@@ -66,7 +66,7 @@ impl InstallService {
                 specific_install_targets,
             } => isobin_manifest.filter_target(specific_install_targets),
         };
-        let install_target_isobin_manifest = IsobinManifest::get_need_install_manifest(
+        let install_target_isobin_manifest = IsobinManifest::get_need_dependency_manifest(
             &specified_isobin_manifest,
             &isobin_manifest_cache,
             &tmp_workspace,
@@ -130,10 +130,6 @@ impl InstallService {
         install_target_isobin_manifest: &IsobinManifest,
         uninstall_target_isobin_manifest: &IsobinManifest,
     ) -> Result<()> {
-        fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir()).await?;
-        IsobinConfigCache::save_cache_to_dir(save_isobin_manifest, tmp_workspace.base_dir())
-            .await?;
-
         let cargo_installer_factory = CargoInstallerFactory::new(tmp_workspace.clone());
         let install_runner_provider = InstallRunnerProvider::<MP>::default();
         let cargo_runner = install_runner_provider
@@ -144,14 +140,20 @@ impl InstallService {
                 uninstall_target_isobin_manifest.cargo(),
             )
             .await?;
-        self.run_each_installs(workspace, tmp_workspace, vec![cargo_runner])
-            .await
+        self.run_each_installs(
+            workspace,
+            tmp_workspace,
+            save_isobin_manifest,
+            vec![cargo_runner],
+        )
+        .await
     }
 
     async fn run_each_installs(
         &self,
         workspace: &Workspace,
         tmp_workspace: &Workspace,
+        save_isobin_manifest: &IsobinManifest,
         runners: Vec<Arc<Mutex<dyn InstallRunner>>>,
     ) -> Result<()> {
         let install_runners = runners.clone();
@@ -185,6 +187,9 @@ impl InstallService {
                 .map(|r| async move { r.lock().await.install_bin_path().await }))
             .await
             .map_err(InstallServiceError::MultiInstall)?;
+            fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir()).await?;
+            IsobinConfigCache::save_cache_to_dir(save_isobin_manifest, tmp_workspace.base_dir())
+                .await?;
 
             let tmp_dir = workspace.cache_dir().join(nanoid!());
             let need_tmp = workspace.base_dir().exists();
@@ -228,13 +233,17 @@ impl<MP: MultiProgress> InstallRunnerProvider<MP> {
         uninstall_target_cargo_manifest: &CargoManifest,
     ) -> Result<Arc<Mutex<dyn InstallRunner>>> {
         let install_targets = specified_cargo_manifest
-            .installs()
+            .dependencies()
             .iter()
             .map(|(name, install_dependency)| {
-                let mode = if install_target_cargo_manifest.installs().get(name).is_some() {
+                let mode = if install_target_cargo_manifest
+                    .dependencies()
+                    .get(name)
+                    .is_some()
+                {
                     InstallTargetMode::Install
                 } else if uninstall_target_cargo_manifest
-                    .installs()
+                    .dependencies()
                     .get(name)
                     .is_some()
                 {

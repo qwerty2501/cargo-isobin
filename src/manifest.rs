@@ -3,7 +3,7 @@ use crate::{
     paths::{isobin_manifest::IsobinManifestPathError, workspace::Workspace},
     providers::ProviderKind,
     utils::{
-        fs_ext, io_ext,
+        io_ext,
         serde_ext::{Json, Toml, Yaml},
     },
 };
@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use providers::cargo::CargoManifest;
 use serde_derive::{Deserialize, Serialize};
-use tokio::{fs, io::AsyncWriteExt};
+use tokio::fs;
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Getters, Default, new)]
 pub struct IsobinManifest {
@@ -105,14 +105,18 @@ impl IsobinManifest {
             ConfigFileExtensions::Json => Ok(Json::parse_from_file(path).await?),
         }
     }
-    pub async fn get_need_install_manifest(
+    pub async fn get_need_dependency_manifest(
         base: &Self,
         old: &Self,
         workspace: &Workspace,
     ) -> Result<Self> {
         Ok(Self {
-            cargo: CargoManifest::get_need_install_manifest(base.cargo(), old.cargo(), workspace)
-                .await?,
+            cargo: CargoManifest::get_need_dependency_manifest(
+                base.cargo(),
+                old.cargo(),
+                workspace,
+            )
+            .await?,
         })
     }
 }
@@ -149,13 +153,7 @@ impl IsobinConfigCache {
         dir: impl AsRef<Path>,
     ) -> Result<()> {
         let cache_file_path = Self::make_cache_path(dir);
-        let mut isobin_manifest_file_cache =
-            fs_ext::open_file_create_if_not_exists(cache_file_path).await?;
-        let sirialized_isobin_manifest = serde_json::to_vec(isobin_manifest)?;
-        isobin_manifest_file_cache
-            .write_all(&sirialized_isobin_manifest)
-            .await?;
-        Ok(())
+        Json::save_to_file(isobin_manifest, cache_file_path).await
     }
     async fn load_cache_from_path(cache_file_path: impl AsRef<Path>) -> Result<IsobinManifest> {
         let data = fs::read(cache_file_path).await?;

@@ -19,47 +19,47 @@ use super::home::CargoWorkspace;
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, new, Default, Getters)]
 pub struct CargoManifest {
     #[serde(serialize_with = "toml::ser::tables_last")]
-    installs: HashMap<String, CargoInstallDependency>,
+    dependencies: HashMap<String, CargoInstallDependency>,
 }
 
 impl CargoManifest {
     pub fn filter_target(&self, targets: &[String]) -> Self {
-        let mut new_installs = HashMap::default();
+        let mut new_dependencies = HashMap::default();
         for target in targets.iter() {
-            if let Some(install) = self.installs.get(target) {
-                new_installs.insert(target.to_string(), install.clone());
+            if let Some(dependency) = self.dependencies.get(target) {
+                new_dependencies.insert(target.to_string(), dependency.clone());
             }
         }
-        Self::new(new_installs)
+        Self::new(new_dependencies)
     }
 
     pub fn merge(base_config: &Self, new_config: &Self) -> Self {
-        let mut new_installs = base_config.installs().clone();
-        for (name, install) in new_config.installs().iter() {
-            new_installs.insert(name.to_string(), install.clone());
+        let mut new_dependencies = base_config.dependencies().clone();
+        for (name, dependency) in new_config.dependencies().iter() {
+            new_dependencies.insert(name.to_string(), dependency.clone());
         }
-        Self::new(new_installs)
+        Self::new(new_dependencies)
     }
 
-    pub async fn get_need_install_manifest(
+    pub async fn get_need_dependency_manifest(
         base: &Self,
         old: &Self,
         workspace: &Workspace,
     ) -> Result<Self> {
         let mut new_cargo_config = Self::default();
         let cargo_workspace = CargoWorkspace::from_workspace(workspace);
-        for (name, dependency) in base.installs().iter() {
-            if let Some(old_dependency) = old.installs().get(name) {
+        for (name, dependency) in base.dependencies().iter() {
+            if let Some(old_dependency) = old.dependencies().get(name) {
                 if dependency != old_dependency
                     || Self::check_need_build_in_path(name, dependency, &cargo_workspace).await?
                 {
                     new_cargo_config
-                        .installs
+                        .dependencies
                         .insert(name.to_string(), dependency.clone());
                 }
             } else {
                 new_cargo_config
-                    .installs
+                    .dependencies
                     .insert(name.to_string(), dependency.clone());
             }
         }
@@ -97,9 +97,9 @@ impl CargoManifest {
     }
     pub fn validate(&self) -> Result<()> {
         let errs = self
-            .installs
+            .dependencies
             .iter()
-            .map(|(name, install)| match install.validate() {
+            .map(|(name, dependency)| match dependency.validate() {
                 Ok(_) => Ok(()),
                 Err(err) => Err(IsobinManifestError::new_validate(
                     ProviderKind::Cargo,
@@ -118,8 +118,8 @@ impl CargoManifest {
         }
     }
     pub fn fix(&mut self, isobin_config_dir: &Path) {
-        for (_, install) in self.installs.iter_mut() {
-            install.fix(isobin_config_dir)
+        for (_, dependency) in self.dependencies.iter_mut() {
+            dependency.fix(isobin_config_dir)
         }
     }
 }
@@ -177,7 +177,7 @@ impl CargoInstallDependencyDetail {
     pub fn validate(&self) -> Result<()> {
         if self.version().is_none() && self.path.is_none() && self.git.is_none() {
             Err(anyhow!(
-                "cargo install dependency should have version or path or git."
+                "cargo dependency dependency should have version or path or git."
             ))
         } else {
             Ok(())
