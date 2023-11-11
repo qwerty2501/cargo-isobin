@@ -14,7 +14,7 @@ pub async fn create_dir_if_not_exists(dir: impl AsRef<Path>) -> Result<()> {
     Ok(())
 }
 
-pub async fn create_file_if_not_exists(file_path: impl AsRef<Path>) -> Result<File> {
+pub async fn smart_create_file(file_path: impl AsRef<Path>) -> Result<File> {
     let file_path = file_path.as_ref();
     if let Some(dir) = file_path.parent() {
         create_dir_if_not_exists(dir).await?;
