@@ -7,7 +7,10 @@ use crate::{
         serde_ext::{Json, Toml, Yaml},
     },
 };
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use providers::cargo::CargoManifest;
 use serde_derive::{Deserialize, Serialize};
@@ -88,17 +91,11 @@ impl IsobinManifest {
         Self::new(self.cargo().filter_target(targets))
     }
 
-    pub fn merge(base_manifest: &Self, new_manifest: &Self) -> Self {
-        Self::new(CargoManifest::merge(
-            base_manifest.cargo(),
-            new_manifest.cargo(),
-        ))
+    pub fn merge(&self, new_manifest: &Self) -> Self {
+        Self::new(self.cargo().merge(new_manifest.cargo()))
     }
-    pub fn remove_targets(base_manifest: &Self, remove_target_manifest: &Self) -> Self {
-        Self::new(CargoManifest::remove_targets(
-            base_manifest.cargo(),
-            remove_target_manifest.cargo(),
-        ))
+    pub fn remove_targets(&self, remove_target_manifest: &Self) -> Self {
+        Self::new(self.cargo().remove_targets(remove_target_manifest.cargo()))
     }
 
     async fn parse(
@@ -131,6 +128,41 @@ impl IsobinManifest {
             cargo: CargoManifest::get_need_uninstall_dependency_manifest(base.cargo(), old.cargo())
                 .await?,
         })
+    }
+}
+
+pub trait Manifest: Clone {
+    type Dependency: Clone;
+    fn dependencies(&self) -> &HashMap<String, Self::Dependency>;
+
+    fn make_from_new_dependencies(&self, dependencies: HashMap<String, Self::Dependency>) -> Self;
+
+    fn filter_target(&self, targets: &[String]) -> Self {
+        let mut new_dependencies = HashMap::<String, Self::Dependency>::new();
+        for target in targets.iter() {
+            if let Some(dependency) = self.dependencies().get(target) {
+                new_dependencies.insert(target.to_owned(), dependency.clone());
+            }
+        }
+        self.make_from_new_dependencies(new_dependencies)
+    }
+
+    fn merge(&self, new_manifest: &Self) -> Self {
+        let mut new_dependencies = self.dependencies().clone();
+        for (name, dependency) in new_manifest.dependencies().iter() {
+            new_dependencies.insert(name.to_string(), dependency.clone());
+        }
+        self.make_from_new_dependencies(new_dependencies)
+    }
+
+    fn remove_targets(&self, remove_target_manifest: &Self) -> Self {
+        let mut new_dependencies = self.dependencies().clone();
+        for name in self.dependencies().keys() {
+            if remove_target_manifest.dependencies().get(name).is_some() {
+                new_dependencies.remove(name);
+            }
+        }
+        self.make_from_new_dependencies(new_dependencies)
     }
 }
 

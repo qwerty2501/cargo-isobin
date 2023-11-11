@@ -9,6 +9,7 @@ use serde_derive::{Deserialize, Serialize};
 use tokio::fs;
 
 use crate::{
+    manifest::Manifest,
     paths::workspace::Workspace,
     providers::ProviderKind,
     utils::file_modified::{
@@ -25,33 +26,6 @@ pub struct CargoManifest {
 }
 
 impl CargoManifest {
-    pub fn filter_target(&self, targets: &[String]) -> Self {
-        let mut new_dependencies = HashMap::default();
-        for target in targets.iter() {
-            if let Some(dependency) = self.dependencies.get(target) {
-                new_dependencies.insert(target.to_string(), dependency.clone());
-            }
-        }
-        Self::new(new_dependencies)
-    }
-
-    pub fn merge(base_manifest: &Self, new_manifest: &Self) -> Self {
-        let mut new_dependencies = base_manifest.dependencies().clone();
-        for (name, dependency) in new_manifest.dependencies().iter() {
-            new_dependencies.insert(name.to_string(), dependency.clone());
-        }
-        Self::new(new_dependencies)
-    }
-    pub fn remove_targets(base_manifest: &Self, remove_target_manifest: &Self) -> Self {
-        let mut new_manifest = base_manifest.clone();
-        for name in base_manifest.dependencies().keys() {
-            if remove_target_manifest.dependencies().get(name).is_some() {
-                new_manifest.dependencies.remove(name);
-            }
-        }
-        new_manifest
-    }
-
     pub async fn get_need_install_dependency_manifest(
         base: &Self,
         old: &Self,
@@ -150,6 +124,16 @@ impl CargoManifest {
                 .insert(name, dependency.fix(isobin_manifest_dir));
         }
         self
+    }
+}
+
+impl Manifest for CargoManifest {
+    type Dependency = CargoInstallDependency;
+    fn dependencies(&self) -> &HashMap<String, Self::Dependency> {
+        &self.dependencies
+    }
+    fn make_from_new_dependencies(&self, dependencies: HashMap<String, Self::Dependency>) -> Self {
+        Self { dependencies }
     }
 }
 

@@ -73,8 +73,7 @@ impl InstallService {
         )
         .await?;
 
-        let save_isobin_manifest =
-            IsobinManifest::merge(&isobin_manifest_cache, &specified_isobin_manifest);
+        let save_isobin_manifest = isobin_manifest_cache.merge(&specified_isobin_manifest);
 
         self.run_install(
             &workspace,
