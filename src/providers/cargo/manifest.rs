@@ -117,10 +117,12 @@ impl CargoManifest {
             Err(IsobinManifestError::MultiValidate(errs).into())
         }
     }
-    pub fn fix(&mut self, isobin_config_dir: &Path) {
-        for (_, dependency) in self.dependencies.iter_mut() {
-            dependency.fix(isobin_config_dir)
+    pub fn fix(mut self, isobin_config_dir: &Path) -> Self {
+        for (name, dependency) in self.dependencies.clone().into_iter() {
+            self.dependencies
+                .insert(name, dependency.fix(isobin_config_dir));
         }
+        self
     }
 }
 
@@ -140,10 +142,10 @@ impl CargoInstallDependency {
         }
     }
 
-    pub fn fix(&mut self, isobin_config_dir: &Path) {
+    pub fn fix(self, isobin_config_dir: &Path) -> Self {
         match self {
-            Self::Simple(_) => {}
-            Self::Detailed(dependency) => dependency.fix(isobin_config_dir),
+            Self::Simple(_) => self,
+            Self::Detailed(dependency) => Self::Detailed(dependency.fix(isobin_config_dir)),
         }
     }
 }
@@ -156,6 +158,8 @@ pub struct CargoInstallDependencyDetail {
     registry: Option<String>,
     index: Option<String>,
     path: Option<PathBuf>,
+    #[serde(skip)]
+    absolute_path: Option<PathBuf>,
     git: Option<String>,
     branch: Option<String>,
     tag: Option<String>,
@@ -168,10 +172,11 @@ pub struct CargoInstallDependencyDetail {
 }
 
 impl CargoInstallDependencyDetail {
-    pub fn fix(&mut self, isobin_config_dir: &Path) {
+    pub fn fix(mut self, isobin_config_dir: &Path) -> Self {
         if let Some(path) = &self.path {
-            self.path = Some(isobin_config_dir.join(path));
+            self.absolute_path = Some(isobin_config_dir.join(path));
         }
+        self
     }
 
     pub fn validate(&self) -> Result<()> {

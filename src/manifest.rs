@@ -39,13 +39,13 @@ pub enum IsobinManifestError {
 impl IsobinManifest {
     pub async fn load_from_file(path: impl AsRef<Path>) -> Result<IsobinManifest> {
         let file_extension = Self::get_file_extension(path.as_ref())?;
-        let mut isobin_manifest = Self::parse(file_extension, path.as_ref()).await?;
+        let isobin_manifest = Self::parse(file_extension, path.as_ref()).await?;
         let isobin_manifest_dir = path
             .as_ref()
             .parent()
             .ok_or_else(IsobinManifestPathError::new_not_found_isobin_manifest)?;
 
-        isobin_manifest.fix(isobin_manifest_dir);
+        let isobin_manifest = isobin_manifest.fix(isobin_manifest_dir);
         isobin_manifest.validate()?;
         Ok(isobin_manifest)
     }
@@ -79,8 +79,9 @@ impl IsobinManifest {
     pub fn validate(&self) -> Result<()> {
         self.cargo.validate()
     }
-    pub fn fix(&mut self, isobin_manifest_dir: &Path) {
-        self.cargo.fix(isobin_manifest_dir)
+    pub fn fix(mut self, isobin_manifest_dir: &Path) -> Self {
+        self.cargo = self.cargo.fix(isobin_manifest_dir);
+        self
     }
 
     pub fn filter_target(&self, targets: &[String]) -> Self {
@@ -284,6 +285,7 @@ mod tests {
             Default::default(),
             Default::default(),
             Default::default(),
+            Default::default(),
             Some("git@github.com:kivikakk/comrak.git".into()),
             Default::default(),
             Default::default(),
@@ -300,6 +302,7 @@ mod tests {
         let cargo_make_dependency_detail = CargoInstallDependencyDetail::new(
             Default::default(),
             Some(Version::parse("2.0.0").unwrap()),
+            Default::default(),
             Default::default(),
             Default::default(),
             Default::default(),

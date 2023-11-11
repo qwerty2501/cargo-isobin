@@ -1,11 +1,11 @@
-mod config;
 mod home;
 mod installer;
+mod manifest;
 
 #[allow(unused_imports)]
 use super::*;
-pub use config::*;
 use home::*;
 pub use installer::*;
+pub use manifest::*;
 
 pub const PROVIDER_NAME: &str = "cargo";
