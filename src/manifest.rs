@@ -11,7 +11,6 @@ use std::path::{Path, PathBuf};
 
 use providers::cargo::CargoManifest;
 use serde_derive::{Deserialize, Serialize};
-use tokio::fs;
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Getters, Default, new)]
 pub struct IsobinManifest {
@@ -51,7 +50,7 @@ impl IsobinManifest {
         Ok(isobin_manifest)
     }
 
-    fn get_file_extension(path: impl AsRef<Path>) -> Result<ConfigFileExtensions> {
+    fn get_file_extension(path: impl AsRef<Path>) -> Result<ManifestFileExtensions> {
         let extension = path
             .as_ref()
             .extension()
@@ -67,9 +66,9 @@ impl IsobinManifest {
         const YML_EXTENSION: &str = "yml";
         const JSON_EXTENSION: &str = "json";
         match extension {
-            TOML_EXTENSION => Ok(ConfigFileExtensions::Toml),
-            YML_EXTENSION | YAML_EXTENSION => Ok(ConfigFileExtensions::Yaml),
-            JSON_EXTENSION => Ok(ConfigFileExtensions::Json),
+            TOML_EXTENSION => Ok(ManifestFileExtensions::Toml),
+            YML_EXTENSION | YAML_EXTENSION => Ok(ManifestFileExtensions::Yaml),
+            JSON_EXTENSION => Ok(ManifestFileExtensions::Json),
             _ => Err(IsobinManifestError::new_unknown_file_extension(
                 io_ext::path_to_string(path.as_ref()),
                 extension.to_string(),
@@ -96,13 +95,13 @@ impl IsobinManifest {
     }
 
     async fn parse(
-        file_extension: ConfigFileExtensions,
+        file_extension: ManifestFileExtensions,
         path: impl AsRef<Path>,
     ) -> Result<IsobinManifest> {
         match file_extension {
-            ConfigFileExtensions::Toml => Ok(Toml::parse_from_file(path).await?),
-            ConfigFileExtensions::Yaml => Ok(Yaml::parse_from_file(path).await?),
-            ConfigFileExtensions::Json => Ok(Json::parse_from_file(path).await?),
+            ManifestFileExtensions::Toml => Ok(Toml::parse_from_file(path).await?),
+            ManifestFileExtensions::Yaml => Ok(Yaml::parse_from_file(path).await?),
+            ManifestFileExtensions::Json => Ok(Json::parse_from_file(path).await?),
         }
     }
     pub async fn get_need_dependency_manifest(
@@ -122,15 +121,15 @@ impl IsobinManifest {
 }
 
 #[derive(PartialEq, Debug)]
-enum ConfigFileExtensions {
+enum ManifestFileExtensions {
     Yaml,
     Toml,
     Json,
 }
 
-pub struct IsobinConfigCache;
+pub struct IsobinManifestCache;
 
-impl IsobinConfigCache {
+impl IsobinManifestCache {
     const ISOBIN_CONFIG_FILE_CACHE_NAME: &str = "isobin_cache.v1.json";
     fn make_cache_path(dir: impl AsRef<Path>) -> PathBuf {
         dir.as_ref().join(Self::ISOBIN_CONFIG_FILE_CACHE_NAME)
@@ -138,8 +137,9 @@ impl IsobinConfigCache {
 
     pub async fn lenient_load_cache_from_dir(dir: impl AsRef<Path>) -> IsobinManifest {
         let cache_file_path = Self::make_cache_path(dir);
+
         if cache_file_path.exists() {
-            match Self::load_cache_from_path(cache_file_path).await {
+            match Json::parse_or_default_if_not_found(cache_file_path).await {
                 Ok(cache) => cache,
                 Err(_) => IsobinManifest::default(),
             }
@@ -154,10 +154,6 @@ impl IsobinConfigCache {
     ) -> Result<()> {
         let cache_file_path = Self::make_cache_path(dir);
         Json::save_to_file(isobin_manifest, cache_file_path).await
-    }
-    async fn load_cache_from_path(cache_file_path: impl AsRef<Path>) -> Result<IsobinManifest> {
-        let data = fs::read(cache_file_path).await?;
-        Ok(serde_json::from_slice(&data)?)
     }
 }
 
@@ -188,18 +184,18 @@ mod tests {
 
     #[rstest]
     #[case(
-        ConfigFileExtensions::Toml,
+        ManifestFileExtensions::Toml,
         "testdata/isobin_manifests/default_load.toml",
         tool_manifest(cargo_install_dependencies())
     )]
     #[case(
-        ConfigFileExtensions::Yaml,
+        ManifestFileExtensions::Yaml,
         "testdata/isobin_manifests/default_load.yaml",
         tool_manifest(cargo_install_dependencies())
     )]
     #[tokio::test]
     async fn isobin_manifest_from_str_works(
-        #[case] ft: ConfigFileExtensions,
+        #[case] ft: ManifestFileExtensions,
         #[case] path: impl AsRef<Path>,
         #[case] expected: IsobinManifest,
     ) {
@@ -215,7 +211,7 @@ mod tests {
 
     #[rstest]
     #[case(
-        ConfigFileExtensions::Toml,
+        ManifestFileExtensions::Toml,
         "testdata/isobin_manifests/default_load.yaml",
             SerdeExtError::new_deserialize_with_hint(
                 anyhow!("expected an equals, found a colon at line 1 column 6"),
@@ -224,7 +220,7 @@ mod tests {
             ),
         )]
     #[case(
-        ConfigFileExtensions::Yaml,
+        ManifestFileExtensions::Yaml,
         "testdata/isobin_manifests/default_load.toml",
             SerdeExtError::new_deserialize_with_hint(
                 anyhow!("did not find expected <document start> at line 2 column 1"),
@@ -233,7 +229,7 @@ mod tests {
             ),
         )]
     #[case(
-        ConfigFileExtensions::Json,
+        ManifestFileExtensions::Json,
         "testdata/isobin_manifests/default_load.toml",
             SerdeExtError::new_deserialize_with_hint(
                 anyhow!("expected value at line 1 column 2"),
@@ -243,7 +239,7 @@ mod tests {
         )]
     #[tokio::test]
     async fn isobin_manifest_from_str_error_works(
-        #[case] ft: ConfigFileExtensions,
+        #[case] ft: ManifestFileExtensions,
         #[case] path: impl AsRef<Path>,
         #[case] expected: SerdeExtError,
     ) {
@@ -328,12 +324,12 @@ mod tests {
     }
 
     #[rstest]
-    #[case("foo.yaml", ConfigFileExtensions::Yaml)]
-    #[case("foo.yml", ConfigFileExtensions::Yaml)]
-    #[case("foo.toml", ConfigFileExtensions::Toml)]
+    #[case("foo.yaml", ManifestFileExtensions::Yaml)]
+    #[case("foo.yml", ManifestFileExtensions::Yaml)]
+    #[case("foo.toml", ManifestFileExtensions::Toml)]
     fn get_manifest_file_extension_works(
         #[case] path: &str,
-        #[case] expected: ConfigFileExtensions,
+        #[case] expected: ManifestFileExtensions,
     ) {
         let actual = IsobinManifest::get_file_extension(path).unwrap();
         pretty_assertions::assert_eq!(expected, actual);

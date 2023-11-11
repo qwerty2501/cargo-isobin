@@ -58,7 +58,7 @@ impl InstallService {
         let isobin_manifest_cache = if install_service_option.force {
             IsobinManifest::default()
         } else {
-            IsobinConfigCache::lenient_load_cache_from_dir(tmp_workspace.base_dir()).await
+            IsobinManifestCache::lenient_load_cache_from_dir(tmp_workspace.base_dir()).await
         };
         let specified_isobin_manifest = match install_service_option.mode() {
             InstallMode::All => isobin_manifest,
@@ -188,7 +188,7 @@ impl InstallService {
             .await
             .map_err(InstallServiceError::MultiInstall)?;
             fs_ext::create_dir_if_not_exists(tmp_workspace.base_dir()).await?;
-            IsobinConfigCache::save_cache_to_dir(save_isobin_manifest, tmp_workspace.base_dir())
+            IsobinManifestCache::save_cache_to_dir(save_isobin_manifest, tmp_workspace.base_dir())
                 .await?;
 
             let tmp_dir = workspace.cache_dir().join(nanoid!());

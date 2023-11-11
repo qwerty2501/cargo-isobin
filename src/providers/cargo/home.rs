@@ -5,7 +5,6 @@ use super::*;
 
 #[derive(Getters, Clone)]
 pub struct CargoWorkspace {
-    #[allow(dead_code)]
     cargo_home_dir: PathBuf,
 }
 

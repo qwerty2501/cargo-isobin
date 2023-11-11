@@ -7,11 +7,9 @@ use tokio::fs::File;
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use utils::fs_ext;
 
-#[allow(dead_code)]
 pub struct Json;
 
 impl Json {
-    #[allow(dead_code)]
     pub async fn save_to_file<T: serde::Serialize>(
         value: &T,
         path: impl AsRef<Path>,
@@ -19,7 +17,6 @@ impl Json {
         write_str_for_serialize(&(Self::serialize_string(value, path.as_ref())?), path).await
     }
 
-    #[allow(dead_code)]
     pub async fn parse_from_file<T: serde::de::DeserializeOwned>(
         path: impl AsRef<Path>,
     ) -> Result<T> {
@@ -27,7 +24,6 @@ impl Json {
         Self::deserialize_str(&s, path)
     }
 
-    #[allow(dead_code)]
     pub async fn parse_or_default_if_not_found<T: serde::de::DeserializeOwned + Default>(
         path: impl AsRef<Path>,
     ) -> Result<T> {
