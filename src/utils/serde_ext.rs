@@ -166,12 +166,19 @@ pub struct ErrorHint {
 impl ErrorHint {
     pub fn source_summary(&self) -> String {
         let lines = self.source.lines().collect::<Vec<_>>();
-        let diff = std::cmp::min(self.line, 2);
-        let summary_target = &lines[self.line - diff..=self.line];
+        let diff = std::cmp::min(self.line, 3);
+        let summary_target = &lines[self.line - diff..self.line];
         summary_target.join("\n")
     }
     pub fn hint(&self) -> String {
-        let mut hint = vec!['_'; self.column];
+        let mut hint = vec![
+            '_';
+            if self.column > 0 {
+                self.column - 1
+            } else {
+                self.column
+            }
+        ];
         hint.push('^');
         String::from_iter(hint.iter())
     }
@@ -269,13 +276,13 @@ mod tests {
 
     #[rstest]
     #[case(include_str!("testdata/make_hint_string_works/case1_json/given_json.json"), 
-        2,
-        2,
+        3,
+        3,
         include_str!("testdata/make_hint_string_works/case1_json/expected_hint.txt"),
         )]
     #[case(include_str!("testdata/make_hint_string_works/case1_json/given_json.json"), 
-        4,
-        16,
+        5,
+        17,
         include_str!("testdata/make_hint_string_works/case2_json/expected_hint.txt"),
         )]
     fn make_hint_string_works(
