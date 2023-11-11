@@ -250,10 +250,7 @@ impl BinPathInstaller for CargoBinPathInstaller {
             if let Some(file_name) = bin_path.file_name().map(|f| f.to_str().unwrap()) {
                 let workspace_bin_path = self.workspace.bin_dir().join(file_name);
                 if workspace_bin_path.exists() {
-                    let actual_bin_path = fs::read_link(&workspace_bin_path).await?;
-                    if &actual_bin_path == bin_path {
-                        fs::remove_file(workspace_bin_path).await?;
-                    }
+                    fs::remove_file(workspace_bin_path).await?;
                 }
             }
         }
