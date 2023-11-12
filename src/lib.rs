@@ -4,6 +4,7 @@ extern crate derive_new;
 #[macro_use]
 extern crate derive_getters;
 
+mod clear;
 mod errors;
 mod fronts;
 mod install;
@@ -26,6 +27,8 @@ use sync::SyncService;
 pub use sync::{SyncServiceOption, SyncServiceOptionBuilder};
 
 use async_trait::async_trait;
+use clear::*;
+pub use clear::{ClearServiceOption, ClearServiceOptionBuilder};
 use manifest::*;
 #[cfg(test)]
 use rstest::*;
@@ -50,5 +53,13 @@ pub async fn sync(sync_service_option: SyncServiceOption) -> Result<()> {
     flex_eprintln!(quiet, "Start sync.");
     sync_service.sync(sync_service_option).await?;
     flex_eprintln!(quiet, "Completed sync.");
+    Ok(())
+}
+pub async fn clear(clear_service_option: ClearServiceOption) -> Result<()> {
+    let clear_service = ClearService::default();
+    let quiet = *clear_service_option.quiet();
+    flex_eprintln!(quiet, "Start clear.");
+    clear_service.clear(clear_service_option).await?;
+    flex_eprintln!(quiet, "Completed clear.");
     Ok(())
 }

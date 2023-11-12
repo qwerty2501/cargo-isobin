@@ -448,7 +448,7 @@ pub struct InstallServiceOptionBase<P> {
 }
 
 pub type InstallServiceOption = InstallServiceOptionBase<Option<PathBuf>>;
-pub type FixedInstallServiceOption = InstallServiceOptionBase<PathBuf>;
+type FixedInstallServiceOption = InstallServiceOptionBase<PathBuf>;
 
 impl InstallServiceOption {
     pub async fn fix(self) -> Result<FixedInstallServiceOption> {

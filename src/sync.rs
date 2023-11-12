@@ -85,7 +85,7 @@ pub struct SyncServiceOptionBase<P> {
 }
 pub type SyncServiceOption = SyncServiceOptionBase<Option<PathBuf>>;
 
-pub type FixedSyncServiceOption = SyncServiceOptionBase<PathBuf>;
+type FixedSyncServiceOption = SyncServiceOptionBase<PathBuf>;
 
 impl SyncServiceOption {
     async fn fix(self) -> Result<FixedSyncServiceOption> {

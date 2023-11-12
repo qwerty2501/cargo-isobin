@@ -32,6 +32,7 @@ impl Application {
             }
             SubCommands::Path => self.path(args.manifest_path, args.quiet).await,
             SubCommands::Sync { force } => self.sync(args.manifest_path, args.quiet, force).await,
+            SubCommands::Clear => self.clear(args.manifest_path, args.quiet).await,
         }
     }
     async fn install(
@@ -88,6 +89,16 @@ impl Application {
         };
         sync(sync_service_option_builder.build()).await
     }
+    async fn clear(&self, isobin_manifest_path: Option<PathBuf>, quiet: bool) -> Result<()> {
+        let clear_service_option_builder = ClearServiceOptionBuilder::default().quiet(quiet);
+        let clear_service_option_builder = if let Some(isobin_manifest_path) = isobin_manifest_path
+        {
+            clear_service_option_builder.isobin_manifest_path(isobin_manifest_path)
+        } else {
+            clear_service_option_builder
+        };
+        clear(clear_service_option_builder.build()).await
+    }
 }
 
 #[derive(Parser)]
@@ -114,4 +125,5 @@ pub enum SubCommands {
         #[arg(short, long, default_value_t = false)]
         force: bool,
     },
+    Clear,
 }

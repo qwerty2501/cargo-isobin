@@ -32,7 +32,7 @@ pub struct PathServiceOptionBase<P> {
 }
 
 pub type PathServiceOption = PathServiceOptionBase<Option<PathBuf>>;
-pub type FixedPathServiceOption = PathServiceOptionBase<PathBuf>;
+type FixedPathServiceOption = PathServiceOptionBase<PathBuf>;
 
 impl PathServiceOption {
     async fn fix(self) -> Result<FixedPathServiceOption> {

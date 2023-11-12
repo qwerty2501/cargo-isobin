@@ -73,6 +73,17 @@ impl WorkspaceProvider {
             unique_cache_dir,
         ))
     }
+    pub async fn remove_isobin_manifest_dir_from_workspace_map(
+        &self,
+        isobin_manifest_dir: impl AsRef<Path>,
+    ) -> Result<()> {
+        let mut workspace_path_map =
+            WorkspacePathMap::parse_from_dir(self.project.data_local_dir()).await?;
+        workspace_path_map
+            .workspace_path_map
+            .remove(isobin_manifest_dir.as_ref().to_str().unwrap());
+        WorkspacePathMap::save_to_dir(&workspace_path_map, self.project.data_local_dir()).await
+    }
 }
 
 #[derive(Deserialize, Serialize, Default, Debug)]
