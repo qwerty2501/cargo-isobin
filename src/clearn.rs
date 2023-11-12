@@ -11,15 +11,15 @@ use crate::{
 };
 
 #[derive(Default)]
-pub struct ClearService {
+pub struct CleanService {
     workspace_provider: WorkspaceProvider,
 }
 
-impl ClearService {
-    pub async fn clear(&self, clear_service_option: ClearServiceOption) -> Result<()> {
-        let clear_service_option = clear_service_option.fix().await?;
+impl CleanService {
+    pub async fn clean(&self, clearn_service_option: CleanServiceOption) -> Result<()> {
+        let clean_service_option = clearn_service_option.fix().await?;
 
-        let isobin_manifest_dir = isobin_manifest_dir(clear_service_option.isobin_manifest_path())?;
+        let isobin_manifest_dir = isobin_manifest_dir(clean_service_option.isobin_manifest_path())?;
 
         let workspace = self
             .workspace_provider
@@ -38,19 +38,19 @@ impl ClearService {
 }
 
 #[derive(Getters)]
-pub struct ClearServiceOptionBase<P> {
+pub struct CleanServiceOptionBase<P> {
     quiet: bool,
     isobin_manifest_path: P,
 }
 
-pub type ClearServiceOption = ClearServiceOptionBase<Option<PathBuf>>;
-type FiexedClearServiceOption = ClearServiceOptionBase<PathBuf>;
+pub type CleanServiceOption = CleanServiceOptionBase<Option<PathBuf>>;
+type FiexedCleanServiceOption = CleanServiceOptionBase<PathBuf>;
 
-impl ClearServiceOption {
-    pub async fn fix(self) -> Result<FiexedClearServiceOption> {
+impl CleanServiceOption {
+    pub async fn fix(self) -> Result<FiexedCleanServiceOption> {
         let isobin_manifest_path =
             isobin_manifest_path_canonicalize(self.isobin_manifest_path).await?;
-        Ok(FiexedClearServiceOption {
+        Ok(FiexedCleanServiceOption {
             quiet: self.quiet,
             isobin_manifest_path,
         })
@@ -58,12 +58,12 @@ impl ClearServiceOption {
 }
 
 #[derive(Default)]
-pub struct ClearServiceOptionBuilder {
+pub struct CleanServiceOptionBuilder {
     quiet: bool,
     isobin_manifest_path: Option<PathBuf>,
 }
 
-impl ClearServiceOptionBuilder {
+impl CleanServiceOptionBuilder {
     pub fn quiet(mut self, quiet: bool) -> Self {
         self.quiet = quiet;
         self
@@ -73,8 +73,8 @@ impl ClearServiceOptionBuilder {
         self
     }
 
-    pub fn build(self) -> ClearServiceOption {
-        ClearServiceOption {
+    pub fn build(self) -> CleanServiceOption {
+        CleanServiceOption {
             quiet: self.quiet,
             isobin_manifest_path: self.isobin_manifest_path,
         }
