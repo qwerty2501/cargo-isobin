@@ -2,6 +2,8 @@ use nanoid::nanoid;
 use tokio::fs;
 use tokio::sync::Mutex;
 
+use crate::bin_map::BinDependency;
+use crate::bin_map::BinMap;
 use crate::fronts::MultiProgress;
 use crate::fronts::Progress;
 use crate::paths::isobin_manifest::isobin_manifest_dir;
@@ -16,6 +18,7 @@ use crate::providers::InstallTargetMode;
 use crate::providers::ProviderKind;
 use crate::utils::fs_ext;
 use crate::utils::fs_ext::copy_dir;
+use crate::utils::fs_ext::enumerate_executable_files;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -156,30 +159,54 @@ impl InstallService {
         runners: Vec<Arc<Mutex<dyn InstallRunner>>>,
     ) -> Result<()> {
         let install_runners = runners.clone();
+        let mut bin_map = BinMap::lenient_load_from_dir(tmp_workspace.base_dir()).await?;
+        let current_bin_files = enumerate_executable_files(tmp_workspace.bin_dir()).await?;
+        let current_bin_file_set = current_bin_files
+            .iter()
+            .map(|path| path.file_name().unwrap().to_str().unwrap().to_string())
+            .collect::<HashSet<_>>();
+        let keys = bin_map
+            .bin_dependencies()
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        for name in keys.iter() {
+            if !current_bin_file_set.contains(name) {
+                bin_map.remove(name);
+            }
+        }
         join_futures!(install_runners
             .into_iter()
             .map(|r| async move { r.lock().await.run_installs().await }))
         .await
         .map_err(InstallServiceError::MultiInstall)?;
         let mut keys = HashSet::new();
-        let mut duplicates = vec![];
+        let mut duplicates = HashSet::new();
         let file_name_runners = runners.clone();
-        for file_name in join_futures!(file_name_runners
+        for bin_path_dependency in join_futures!(file_name_runners
             .into_iter()
             .map(|r| async move { r.lock().await.bin_paths().await }))
         .await
         .map_err(InstallServiceError::MultiInstall)?
         .into_iter()
         .flatten()
-        .map(|p| p.file_name().unwrap().to_str().unwrap().to_string())
         {
+            let file_name = bin_path_dependency
+                .bin_path()
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string();
             if !keys.insert(file_name.clone()) {
-                duplicates.push(file_name);
+                duplicates.insert(file_name.clone());
             }
+            bin_map.insert(file_name, bin_path_dependency.clone());
         }
         if !duplicates.is_empty() {
-            Err(InstallServiceError::new_duplicate_bin(duplicates).into())
+            Err(InstallServiceError::new_duplicate_bin(duplicates.into_iter().collect()).into())
         } else {
+            BinMap::save_to_dir(&bin_map, tmp_workspace.base_dir()).await?;
             let install_bin_path_runners = runners.clone();
             join_futures!(install_bin_path_runners
                 .into_iter()
@@ -293,9 +320,9 @@ impl<MP: MultiProgress> InstallRunnerProvider<MP> {
 
 #[async_trait]
 pub trait InstallRunner: 'static + Sync + Send {
-    fn provider_type(&self) -> providers::ProviderKind;
+    fn provider_kind(&self) -> providers::ProviderKind;
     async fn run_installs(&self) -> Result<()>;
-    async fn bin_paths(&self) -> Result<Vec<PathBuf>>;
+    async fn bin_paths(&self) -> Result<Vec<BinDependency>>;
     async fn install_bin_path(&self) -> Result<()>;
     fn done_contexts(&self) -> Result<()>;
 }
@@ -407,7 +434,7 @@ impl<
         }
         Ok(())
     }
-    fn provider_type(&self) -> providers::ProviderKind {
+    fn provider_kind(&self) -> providers::ProviderKind {
         self.core_installer.provider_kind()
     }
 
@@ -417,7 +444,7 @@ impl<
             providers::MultiInstallMode::Sequential => self.run_sequential_installs().await,
         }
     }
-    async fn bin_paths(&self) -> Result<Vec<PathBuf>> {
+    async fn bin_paths(&self) -> Result<Vec<BinDependency>> {
         let bin_paths = join_futures!(self.contexts.iter().map(|context| {
             let bin_path_installer = self.bin_path_installer.clone();
             let target = context.target().clone();
@@ -427,6 +454,7 @@ impl<
         .map_err(InstallServiceError::MultiInstall)?;
         Ok(bin_paths.into_iter().flatten().collect())
     }
+
     async fn install_bin_path(&self) -> Result<()> {
         join_futures!(self
             .contexts

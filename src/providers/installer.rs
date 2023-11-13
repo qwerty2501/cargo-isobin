@@ -1,5 +1,6 @@
+use crate::bin_map::BinDependency;
+
 use super::*;
-use std::path::PathBuf;
 
 #[async_trait]
 pub trait InstallerFactory: 'static + Send + Sync {
@@ -42,7 +43,7 @@ pub trait InstallTarget: 'static + Send + Sync + Clone {
 #[async_trait]
 pub trait BinPathInstaller: 'static + Send + Sync + Clone {
     type InstallTarget: InstallTarget;
-    async fn bin_paths(&self, target: &Self::InstallTarget) -> Result<Vec<PathBuf>>;
+    async fn bin_paths(&self, target: &Self::InstallTarget) -> Result<Vec<BinDependency>>;
     async fn install_bin_path(&self, target: &Self::InstallTarget) -> Result<()>;
     async fn uninstall_bin_path(&self, target: &Self::InstallTarget) -> Result<()>;
 }

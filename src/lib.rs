@@ -4,6 +4,7 @@ extern crate derive_new;
 #[macro_use]
 extern crate derive_getters;
 
+mod bin_map;
 mod clearn;
 mod errors;
 mod fronts;
