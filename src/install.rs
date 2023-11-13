@@ -428,11 +428,15 @@ impl<
         Ok(bin_paths.into_iter().flatten().collect())
     }
     async fn install_bin_path(&self) -> Result<()> {
-        join_futures!(self.contexts.iter().map(|context| {
-            let bin_path_installer = self.bin_path_installer.clone();
-            let target = context.target().clone();
-            async move { bin_path_installer.install_bin_path(&target).await }
-        }))
+        join_futures!(self
+            .contexts
+            .iter()
+            .filter(|context| context.target().mode() == &InstallTargetMode::Install)
+            .map(|context| {
+                let bin_path_installer = self.bin_path_installer.clone();
+                let target = context.target().clone();
+                async move { bin_path_installer.install_bin_path(&target).await }
+            }))
         .await
         .map_err(InstallServiceError::MultiInstall)?;
         Ok(())

@@ -32,7 +32,7 @@ impl Application {
             }
             SubCommands::Path => self.path(args.manifest_path, args.quiet).await,
             SubCommands::Sync { force } => self.sync(args.manifest_path, args.quiet, force).await,
-            SubCommands::Clean => self.clearn(args.manifest_path, args.quiet).await,
+            SubCommands::Clean => self.clean(args.manifest_path, args.quiet).await,
         }
     }
     async fn install(
@@ -89,7 +89,7 @@ impl Application {
         };
         sync(sync_service_option_builder.build()).await
     }
-    async fn clearn(&self, isobin_manifest_path: Option<PathBuf>, quiet: bool) -> Result<()> {
+    async fn clean(&self, isobin_manifest_path: Option<PathBuf>, quiet: bool) -> Result<()> {
         let clean_service_option_builder = CleanServiceOptionBuilder::default().quiet(quiet);
         let clean_service_option_builder = if let Some(isobin_manifest_path) = isobin_manifest_path
         {

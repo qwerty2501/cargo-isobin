@@ -25,7 +25,7 @@ pub enum MultiInstallMode {
     Sequential,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum InstallTargetMode {
     Install,
     AlreadyInstalled,
