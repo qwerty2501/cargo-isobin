@@ -201,8 +201,9 @@ impl InstallService {
         .map_err(InstallServiceError::MultiInstall)?
         .into_iter()
         .flatten()
-        .filter(|tbd| tbd.mode() == &TargetMode::Install)
-        {
+        .filter(|tbd| {
+            tbd.mode() == &TargetMode::Install || tbd.mode() == &TargetMode::AlreadyInstalled
+        }) {
             let file_name = target_bin_dependency.bin_dependency().bin_file_name();
             if let Some(bin_dependency) = bin_map.bin_dependencies().get(file_name) {
                 if bin_dependency != target_bin_dependency.bin_dependency() {
