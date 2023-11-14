@@ -39,7 +39,7 @@ pub struct MultiProgress;
 
 impl crate::fronts::MultiProgress for MultiProgress {
     type Progress = Progress;
-    fn make_progress(&self, _: &impl crate::providers::InstallTarget) -> Self::Progress {
+    fn make_progress(&self, _: &impl crate::providers::TargetDependency) -> Self::Progress {
         Self::Progress {}
     }
 }

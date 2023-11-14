@@ -4,7 +4,7 @@ use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::{
-    providers::{InstallTarget, ProviderKind},
+    providers::{ProviderKind, TargetDependency},
     Result,
 };
 
@@ -17,7 +17,7 @@ pub struct Progress {
 }
 
 impl Progress {
-    pub fn new(progress_bar: ProgressBar, install_target: &impl InstallTarget) -> Self {
+    pub fn new(progress_bar: ProgressBar, install_target: &impl TargetDependency) -> Self {
         Self {
             progress_bar,
             provider_kind: install_target.provider_kind(),

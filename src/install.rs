@@ -10,12 +10,12 @@ use crate::paths::isobin_manifest::isobin_manifest_dir;
 use crate::paths::isobin_manifest::isobin_manifest_path_canonicalize;
 use crate::paths::workspace::Workspace;
 use crate::paths::workspace::WorkspaceProvider;
-use crate::providers::cargo::CargoInstallTarget;
 use crate::providers::cargo::CargoInstallerFactory;
 use crate::providers::cargo::CargoManifest;
-use crate::providers::InstallTarget;
-use crate::providers::InstallTargetMode;
+use crate::providers::cargo::CargoTargetDependency;
 use crate::providers::ProviderKind;
+use crate::providers::TargetDependency;
+use crate::providers::TargetMode;
 use crate::utils::fs_ext;
 use crate::utils::fs_ext::copy_dir;
 use crate::utils::fs_ext::enumerate_executable_files;
@@ -243,7 +243,7 @@ impl InstallService {
 }
 
 #[derive(Getters, new, Clone)]
-struct InstallTargetContext<IF: InstallTarget + Clone, P: Progress> {
+struct InstallTargetContext<IF: TargetDependency + Clone, P: Progress> {
     target: IF,
     progress: P,
 }
@@ -270,11 +270,11 @@ impl<MP: MultiProgress> InstallRunnerProvider<MP> {
                     .get(name)
                     .is_some()
                 {
-                    InstallTargetMode::Install
+                    TargetMode::Install
                 } else {
-                    InstallTargetMode::AlreadyInstalled
+                    TargetMode::AlreadyInstalled
                 };
-                CargoInstallTarget::new(name.into(), install_dependency.clone(), mode)
+                CargoTargetDependency::new(name.into(), install_dependency.clone(), mode)
             })
             .collect::<Vec<_>>();
         install_targets.extend_from_slice(
@@ -282,10 +282,10 @@ impl<MP: MultiProgress> InstallRunnerProvider<MP> {
                 .dependencies()
                 .iter()
                 .map(|(name, uninstall_dependency)| {
-                    CargoInstallTarget::new(
+                    CargoTargetDependency::new(
                         name.into(),
                         uninstall_dependency.clone(),
-                        InstallTargetMode::Uninstall,
+                        TargetMode::Uninstall,
                     )
                 })
                 .collect::<Vec<_>>(),
@@ -329,7 +329,7 @@ pub trait InstallRunner: 'static + Sync + Send {
 
 #[derive(new)]
 struct InstallRunnerImpl<
-    IT: providers::InstallTarget,
+    IT: providers::TargetDependency,
     CI: providers::CoreInstaller<InstallTarget = IT>,
     BI: providers::BinPathInstaller<InstallTarget = IT>,
     P: Progress,
@@ -340,7 +340,7 @@ struct InstallRunnerImpl<
 }
 
 impl<
-        IT: providers::InstallTarget,
+        IT: providers::TargetDependency,
         CI: providers::CoreInstaller<InstallTarget = IT>,
         BI: providers::BinPathInstaller<InstallTarget = IT>,
         P: Progress,
@@ -377,7 +377,7 @@ impl<
         let progress = install_context.progress();
         let target = install_context.target();
         match target.mode() {
-            InstallTargetMode::Install => {
+            TargetMode::Install => {
                 progress.start_install()?;
                 match core_installer.install(target).await {
                     Ok(_) => {
@@ -390,8 +390,8 @@ impl<
                     }
                 }
             }
-            InstallTargetMode::AlreadyInstalled => progress.already_installed(),
-            InstallTargetMode::Uninstall => {
+            TargetMode::AlreadyInstalled => progress.already_installed(),
+            TargetMode::Uninstall => {
                 progress.start_uninstall()?;
                 match Self::uninstall(core_installer, bin_path_installer, target).await {
                     Ok(_) => {
@@ -414,7 +414,7 @@ impl<
 
 #[async_trait]
 impl<
-        IT: providers::InstallTarget,
+        IT: providers::TargetDependency,
         CI: providers::CoreInstaller<InstallTarget = IT>,
         BI: providers::BinPathInstaller<InstallTarget = IT>,
         P: Progress,
@@ -423,10 +423,10 @@ impl<
     fn done_contexts(&self) -> Result<()> {
         for context in self.contexts.iter() {
             match context.target().mode() {
-                InstallTargetMode::Install => {
+                TargetMode::Install => {
                     context.progress().done_install()?;
                 }
-                InstallTargetMode::Uninstall => {
+                TargetMode::Uninstall => {
                     context.progress().done_uninstall()?;
                 }
                 _ => {}
@@ -459,7 +459,7 @@ impl<
         join_futures!(self
             .contexts
             .iter()
-            .filter(|context| context.target().mode() == &InstallTargetMode::Install)
+            .filter(|context| context.target().mode() == &TargetMode::Install)
             .map(|context| {
                 let bin_path_installer = self.bin_path_installer.clone();
                 let target = context.target().clone();

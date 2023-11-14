@@ -1,13 +1,13 @@
 pub mod console;
 pub mod quiet;
 
-use crate::providers::InstallTarget;
+use crate::providers::TargetDependency;
 use crate::Result;
 pub use console::print_error;
 
 pub trait MultiProgress: Clone + 'static + Send + Sync + Default {
     type Progress: Progress;
-    fn make_progress(&self, install_target: &impl InstallTarget) -> Self::Progress;
+    fn make_progress(&self, install_target: &impl TargetDependency) -> Self::Progress;
 }
 pub trait Progress: Clone + 'static + Send + Sync {
     fn prepare_install(&self) -> Result<()>;

@@ -30,7 +30,7 @@ impl CargoInstallerFactory {
 
 #[async_trait]
 impl InstallerFactory for CargoInstallerFactory {
-    type InstallTarget = CargoInstallTarget;
+    type InstallTarget = CargoTargetDependency;
     type CoreInstaller = CargoCoreInstaller;
     type BinPathInstaller = CargoBinPathInstaller;
 
@@ -98,7 +98,7 @@ impl CargoCoreInstaller {
 
 #[async_trait]
 impl providers::CoreInstaller for CargoCoreInstaller {
-    type InstallTarget = CargoInstallTarget;
+    type InstallTarget = CargoTargetDependency;
     fn provider_kind(&self) -> providers::ProviderKind {
         providers::ProviderKind::Cargo
     }
@@ -155,13 +155,13 @@ impl providers::CoreInstaller for CargoCoreInstaller {
 }
 
 #[derive(new, Getters, Clone)]
-pub struct CargoInstallTarget {
+pub struct CargoTargetDependency {
     name: String,
     install_dependency: CargoInstallDependency,
-    mode: InstallTargetMode,
+    mode: TargetMode,
 }
 
-impl providers::InstallTarget for CargoInstallTarget {
+impl providers::TargetDependency for CargoTargetDependency {
     fn provider_kind(&self) -> ProviderKind {
         ProviderKind::Cargo
     }
@@ -169,7 +169,7 @@ impl providers::InstallTarget for CargoInstallTarget {
         &self.name
     }
 
-    fn mode(&self) -> &InstallTargetMode {
+    fn mode(&self) -> &TargetMode {
         &self.mode
     }
     fn summary(&self) -> String {
@@ -208,7 +208,7 @@ impl CargoBinPathInstaller {
             workspace,
         }
     }
-    fn bin_dir(&self, target: &CargoInstallTarget) -> PathBuf {
+    fn bin_dir(&self, target: &CargoTargetDependency) -> PathBuf {
         self.cargo_workspace
             .cargo_home_dir()
             .join(target.name())
@@ -218,7 +218,7 @@ impl CargoBinPathInstaller {
 
 #[async_trait]
 impl BinPathInstaller for CargoBinPathInstaller {
-    type InstallTarget = CargoInstallTarget;
+    type InstallTarget = CargoTargetDependency;
 
     async fn bin_paths(&self, target: &Self::InstallTarget) -> Result<Vec<BinDependency>> {
         let bin_paths = enumerate_executable_files(self.bin_dir(target)).await?;
