@@ -220,15 +220,18 @@ impl CargoBinPathInstaller {
 impl BinPathInstaller for CargoBinPathInstaller {
     type InstallTarget = CargoTargetDependency;
 
-    async fn bin_paths(&self, target: &Self::InstallTarget) -> Result<Vec<BinDependency>> {
+    async fn bin_paths(&self, target: &Self::InstallTarget) -> Result<Vec<TargetBinDependency>> {
         let bin_paths = enumerate_executable_files(self.bin_dir(target)).await?;
         Ok(bin_paths
             .into_iter()
             .map(|bin_path| {
-                BinDependency::new(
-                    target.provider_kind().clone(),
-                    target.name().to_string(),
-                    bin_path,
+                TargetBinDependency::new(
+                    target.mode().clone(),
+                    BinDependency::new(
+                        target.provider_kind().clone(),
+                        target.name().to_string(),
+                        bin_path.file_name().unwrap().to_str().unwrap().to_string(),
+                    ),
                 )
             })
             .collect())
@@ -242,11 +245,10 @@ impl BinPathInstaller for CargoBinPathInstaller {
     async fn uninstall_bin_path(&self, target: &Self::InstallTarget) -> Result<()> {
         let bin_paths = self.bin_paths(target).await?;
         for bin_path in bin_paths.iter() {
-            if let Some(file_name) = bin_path.bin_path().file_name().map(|f| f.to_str().unwrap()) {
-                let workspace_bin_path = self.workspace.bin_dir().join(file_name);
-                if workspace_bin_path.exists() {
-                    fs::remove_file(workspace_bin_path).await?;
-                }
+            let file_name = bin_path.bin_dependency().bin_file_name();
+            let workspace_bin_path = self.workspace.bin_dir().join(file_name);
+            if workspace_bin_path.exists() {
+                fs::remove_file(workspace_bin_path).await?;
             }
         }
         Ok(())

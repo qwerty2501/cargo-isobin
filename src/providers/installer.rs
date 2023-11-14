@@ -40,10 +40,16 @@ pub trait TargetDependency: 'static + Send + Sync + Clone {
     fn summary(&self) -> String;
 }
 
+#[derive(new, Getters, Clone)]
+pub struct TargetBinDependency {
+    mode: TargetMode,
+    bin_dependency: BinDependency,
+}
+
 #[async_trait]
 pub trait BinPathInstaller: 'static + Send + Sync + Clone {
     type InstallTarget: TargetDependency;
-    async fn bin_paths(&self, target: &Self::InstallTarget) -> Result<Vec<BinDependency>>;
+    async fn bin_paths(&self, target: &Self::InstallTarget) -> Result<Vec<TargetBinDependency>>;
     async fn install_bin_path(&self, target: &Self::InstallTarget) -> Result<()>;
     async fn uninstall_bin_path(&self, target: &Self::InstallTarget) -> Result<()>;
 }

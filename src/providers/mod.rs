@@ -10,6 +10,7 @@ pub use installer::*;
 
 #[derive(PartialEq, Debug, Clone, IntoStaticStr, Display, Deserialize, Serialize)]
 pub enum ProviderKind {
+    #[serde(rename = "cargo")]
     #[strum(serialize = "cargo")]
     Cargo,
 }

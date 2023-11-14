@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, path::Path};
 
 use serde_derive::{Deserialize, Serialize};
 
@@ -44,5 +41,5 @@ impl BinMap {
 pub struct BinDependency {
     provider_kind: ProviderKind,
     name: String,
-    bin_path: PathBuf,
+    bin_file_name: String,
 }
