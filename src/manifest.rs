@@ -53,6 +53,10 @@ impl IsobinManifest {
         Ok(isobin_manifest)
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.cargo().dependencies().is_empty()
+    }
+
     fn get_file_extension(path: impl AsRef<Path>) -> Result<ManifestFileExtensions> {
         let extension = path
             .as_ref()

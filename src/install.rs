@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use nanoid::nanoid;
 use tokio::fs;
 use tokio::sync::Mutex;
@@ -100,6 +101,12 @@ impl InstallService {
         uninstall_target_isobin_manifest: &IsobinManifest,
         quiet: bool,
     ) -> Result<()> {
+        if specified_isobin_manifest.is_empty()
+            && install_target_isobin_manifest.is_empty()
+            && uninstall_target_isobin_manifest.is_empty()
+        {
+            Err(anyhow!("The install target does not exists"))?;
+        }
         if quiet {
             self.run_install_::<fronts::quiet::MultiProgress>(
                 workspace,
