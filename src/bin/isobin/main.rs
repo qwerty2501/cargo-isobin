@@ -12,7 +12,11 @@ async fn main() {
         Ok(()) => {}
         Err(err) => {
             print_error(&err);
-            exit(1);
+            if let Some(RunServiceError::RunFailed { status }) = err.downcast_ref() {
+                exit(status.code().unwrap_or(1));
+            } else {
+                exit(1);
+            }
         }
     }
 }

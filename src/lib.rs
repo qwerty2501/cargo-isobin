@@ -27,7 +27,7 @@ use path::PathService;
 pub use path::{PathServiceOption, PathServiceOptionBuilder};
 pub use result::*;
 use run::*;
-pub use run::{RunServiceOption, RunServiceOptionBuilder};
+pub use run::{RunServiceError, RunServiceOption, RunServiceOptionBuilder};
 use sync::SyncService;
 pub use sync::{SyncServiceOption, SyncServiceOptionBuilder};
 
