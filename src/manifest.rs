@@ -38,6 +38,12 @@ pub enum IsobinManifestError {
     },
     #[error("{0:#?}")]
     MultiValidate(Vec<Error>),
+
+    #[error("Not found {name} in isobin manifest")]
+    NotFoundDependency {
+        provider: Option<ProviderKind>,
+        name: String,
+    },
 }
 
 impl IsobinManifest {
@@ -92,15 +98,46 @@ impl IsobinManifest {
         self
     }
 
-    pub fn filter_target(&self, targets: &[SpecifiedTarget]) -> Self {
-        let cargo_targets = targets
+    pub fn filter_target(&self, targets: &[SpecifiedTarget]) -> Result<Self> {
+        let mut new_manifest = self.clone();
+        new_manifest.cargo = CargoManifest::default();
+        let mut errs = vec![];
+        for target in targets
             .iter()
-            .filter(|t| {
-                t.provider_kind().is_none() || t.provider_kind() == &Some(ProviderKind::Cargo)
-            })
-            .map(|t| t.name().clone())
-            .collect::<Vec<_>>();
-        Self::new(self.cargo().filter_target(&cargo_targets))
+            .filter(|t| t.provider_kind() == &Some(ProviderKind::Cargo))
+            .map(|t| t.name())
+        {
+            match self.cargo().filter_target(target) {
+                Ok(cargo_manifest) => {
+                    new_manifest.cargo = new_manifest.cargo.merge(&cargo_manifest);
+                }
+                Err(err) => {
+                    errs.push(err);
+                }
+            }
+        }
+
+        for target in targets
+            .iter()
+            .filter(|t| t.provider_kind().is_none())
+            .map(|t| t.name())
+        {
+            match self.cargo().filter_target(target) {
+                Ok(cargo_manifest) => {
+                    new_manifest.cargo = new_manifest.cargo.merge(&cargo_manifest);
+                }
+                Err(_) => {
+                    errs.push(
+                        IsobinManifestError::new_not_found_dependency(None, target.clone()).into(),
+                    );
+                }
+            }
+        }
+        if errs.is_empty() {
+            Ok(new_manifest)
+        } else {
+            Err(IsobinManifestError::new_multi_validate(errs).into())
+        }
     }
 
     pub fn merge(&self, new_manifest: &Self) -> Self {
@@ -149,14 +186,18 @@ pub trait Manifest: Clone {
 
     fn make_from_new_dependencies(&self, dependencies: HashMap<String, Self::Dependency>) -> Self;
 
-    fn filter_target(&self, targets: &[String]) -> Self {
+    fn filter_target(&self, target: impl AsRef<str>) -> Result<Self> {
         let mut new_dependencies = HashMap::<String, Self::Dependency>::new();
-        for target in targets.iter() {
-            if let Some(dependency) = self.dependencies().get(target) {
-                new_dependencies.insert(target.to_owned(), dependency.clone());
-            }
+        if let Some(dependency) = self.dependencies().get(target.as_ref()) {
+            new_dependencies.insert(target.as_ref().to_string(), dependency.clone());
+            Ok(self.make_from_new_dependencies(new_dependencies))
+        } else {
+            Err(IsobinManifestError::new_not_found_dependency(
+                Some(ProviderKind::Cargo),
+                target.as_ref().to_string(),
+            )
+            .into())
         }
-        self.make_from_new_dependencies(new_dependencies)
     }
 
     fn merge(&self, new_manifest: &Self) -> Self {

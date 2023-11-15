@@ -68,7 +68,7 @@ impl InstallService {
             InstallMode::All => isobin_manifest,
             InstallMode::SpecificInstallTargetsOnly {
                 specified_install_targets: specific_install_targets,
-            } => isobin_manifest.filter_target(specific_install_targets),
+            } => isobin_manifest.filter_target(specific_install_targets)?,
         };
         let install_target_isobin_manifest = IsobinManifest::get_need_install_dependency_manifest(
             &specified_isobin_manifest,
