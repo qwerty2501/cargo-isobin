@@ -2,6 +2,7 @@ use super::*;
 use crate::{
     paths::{isobin_manifest::IsobinManifestPathError, workspace::Workspace},
     providers::ProviderKind,
+    specified_target::SpecifiedTarget,
     utils::{
         io_ext,
         serde_ext::{Json, Toml, Yaml},
@@ -91,8 +92,15 @@ impl IsobinManifest {
         self
     }
 
-    pub fn filter_target(&self, targets: &[String]) -> Self {
-        Self::new(self.cargo().filter_target(targets))
+    pub fn filter_target(&self, targets: &[SpecifiedTarget]) -> Self {
+        let cargo_targets = targets
+            .iter()
+            .filter(|t| {
+                t.provider_kind().is_none() || t.provider_kind() == &Some(ProviderKind::Cargo)
+            })
+            .map(|t| t.name().clone())
+            .collect::<Vec<_>>();
+        Self::new(self.cargo().filter_target(&cargo_targets))
     }
 
     pub fn merge(&self, new_manifest: &Self) -> Self {

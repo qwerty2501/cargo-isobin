@@ -17,6 +17,7 @@ use crate::providers::ProviderKind;
 use crate::providers::TargetBinDependency;
 use crate::providers::TargetDependency;
 use crate::providers::TargetMode;
+use crate::specified_target::SpecifiedTarget;
 use crate::utils::fs_ext;
 use crate::utils::fs_ext::copy_dir;
 use std::collections::HashSet;
@@ -29,7 +30,7 @@ use std::sync::Arc;
 pub enum InstallMode {
     All,
     SpecificInstallTargetsOnly {
-        specific_install_targets: Vec<String>,
+        specified_install_targets: Vec<SpecifiedTarget>,
     },
 }
 
@@ -66,7 +67,7 @@ impl InstallService {
         let specified_isobin_manifest = match install_service_option.mode() {
             InstallMode::All => isobin_manifest,
             InstallMode::SpecificInstallTargetsOnly {
-                specific_install_targets,
+                specified_install_targets: specific_install_targets,
             } => isobin_manifest.filter_target(specific_install_targets),
         };
         let install_target_isobin_manifest = IsobinManifest::get_need_install_dependency_manifest(

@@ -15,6 +15,7 @@ mod path;
 mod paths;
 mod providers;
 mod result;
+mod specified_target;
 mod sync;
 mod utils;
 pub use errors::*;
@@ -31,8 +32,10 @@ use async_trait::async_trait;
 use clearn::*;
 pub use clearn::{CleanServiceOption, CleanServiceOptionBuilder};
 use manifest::*;
+pub use providers::ProviderKind;
 #[cfg(test)]
 use rstest::*;
+pub use specified_target::*;
 
 pub async fn install(install_service_option: InstallServiceOption) -> Result<()> {
     let install_service = InstallService::default();

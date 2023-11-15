@@ -25,10 +25,17 @@ impl Application {
         match subcommand {
             SubCommands::Install {
                 force,
+                cargo_install_targets,
                 install_targets,
             } => {
-                self.install(args.manifest_path, args.quiet, force, install_targets)
-                    .await
+                self.install(
+                    args.manifest_path,
+                    args.quiet,
+                    force,
+                    cargo_install_targets,
+                    install_targets,
+                )
+                .await
             }
             SubCommands::Path => self.path(args.manifest_path, args.quiet).await,
             SubCommands::Sync { force } => self.sync(args.manifest_path, args.quiet, force).await,
@@ -40,13 +47,26 @@ impl Application {
         isobin_manifest_path: Option<PathBuf>,
         quiet: bool,
         force: bool,
+        cargo_install_targets: Option<Vec<String>>,
         install_targets: Option<Vec<String>>,
     ) -> Result<()> {
+        let mut targets = vec![];
+        if let Some(cargo_install_targets) = cargo_install_targets {
+            for target in cargo_install_targets.into_iter() {
+                targets.push(SpecifiedTarget::new(Some(ProviderKind::Cargo), target));
+            }
+        }
+        if let Some(install_targets) = install_targets {
+            for target in install_targets.into_iter() {
+                targets.push(SpecifiedTarget::new(None, target));
+            }
+        }
+
         let install_service_option_builder = InstallServiceOptionBuilder::default()
             .quiet(quiet)
-            .mode(if let Some(install_targets) = install_targets {
+            .mode(if !targets.is_empty() {
                 InstallMode::SpecificInstallTargetsOnly {
-                    specific_install_targets: install_targets,
+                    specified_install_targets: targets,
                 }
             } else {
                 InstallMode::All
@@ -118,6 +138,8 @@ pub enum SubCommands {
     Install {
         #[arg(short, long, default_value_t = false)]
         force: bool,
+        #[arg(long = "cargo")]
+        cargo_install_targets: Option<Vec<String>>,
         install_targets: Option<Vec<String>>,
     },
     Path,
