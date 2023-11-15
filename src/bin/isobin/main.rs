@@ -7,7 +7,7 @@ async fn main() {
     let app = Application;
 
     let args = Arguments::parse();
-    let result = app.run(args).await;
+    let result = app.exec(args).await;
     match result {
         Ok(()) => {}
         Err(err) => {
@@ -20,7 +20,7 @@ async fn main() {
 pub struct Application;
 
 impl Application {
-    pub async fn run(&self, args: Arguments) -> Result<()> {
+    pub async fn exec(&self, args: Arguments) -> Result<()> {
         let subcommand = args.subcommand;
         match subcommand {
             SubCommands::Install {
@@ -40,6 +40,11 @@ impl Application {
             SubCommands::Path => self.path(args.manifest_path, args.quiet).await,
             SubCommands::Sync { force } => self.sync(args.manifest_path, args.quiet, force).await,
             SubCommands::Clean => self.clean(args.manifest_path, args.quiet).await,
+            SubCommands::Run {
+                quiet,
+                bin,
+                arguments,
+            } => self.run(args.manifest_path, quiet, bin, arguments).await,
         }
     }
     async fn install(
@@ -119,6 +124,26 @@ impl Application {
         };
         clear(clean_service_option_builder.build()).await
     }
+    async fn run(
+        &self,
+        isobin_manifest_path: Option<PathBuf>,
+        quiet: bool,
+        bin: String,
+        arguments: Option<Vec<String>>,
+    ) -> Result<()> {
+        let run_service_option_builder = RunServiceOptionBuilder::default().quiet(quiet).bin(bin);
+        let run_service_option_builder = if let Some(isobin_manifest_path) = isobin_manifest_path {
+            run_service_option_builder.isobin_manifest_path(isobin_manifest_path)
+        } else {
+            run_service_option_builder
+        };
+        let run_service_option_builder = if let Some(arguments) = arguments {
+            run_service_option_builder.args(arguments)
+        } else {
+            run_service_option_builder
+        };
+        run(run_service_option_builder.build()).await
+    }
 }
 
 #[derive(Parser)]
@@ -148,4 +173,10 @@ pub enum SubCommands {
         force: bool,
     },
     Clean,
+    Run {
+        #[arg(long, short, default_value_t = false)]
+        quiet: bool,
+        bin: String,
+        arguments: Option<Vec<String>>,
+    },
 }

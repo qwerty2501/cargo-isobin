@@ -140,6 +140,25 @@ impl IsobinManifest {
         }
     }
 
+    pub fn exists_name(&self, name: impl AsRef<str>) -> bool {
+        self.cargo().dependencies().contains_key(name.as_ref())
+    }
+
+    pub fn ditect_difference(
+        &self,
+        other: &Self,
+        provider_kind: &ProviderKind,
+        name: impl AsRef<str>,
+    ) -> bool {
+        match provider_kind {
+            ProviderKind::Cargo => {
+                let self_dependency = self.cargo().dependencies().get(name.as_ref());
+                self_dependency.is_some()
+                    && self_dependency == other.cargo().dependencies().get(name.as_ref())
+            }
+        }
+    }
+
     pub fn merge(&self, new_manifest: &Self) -> Self {
         Self::new(self.cargo().merge(new_manifest.cargo()))
     }

@@ -15,6 +15,7 @@ mod path;
 mod paths;
 mod providers;
 mod result;
+mod run;
 mod specified_target;
 mod sync;
 mod utils;
@@ -25,6 +26,8 @@ pub use install::{InstallMode, InstallServiceOption, InstallServiceOptionBuilder
 use path::PathService;
 pub use path::{PathServiceOption, PathServiceOptionBuilder};
 pub use result::*;
+use run::*;
+pub use run::{RunServiceOption, RunServiceOptionBuilder};
 use sync::SyncService;
 pub use sync::{SyncServiceOption, SyncServiceOptionBuilder};
 
@@ -66,4 +69,9 @@ pub async fn clear(clean_service_option: CleanServiceOption) -> Result<()> {
     clean_service.clean(clean_service_option).await?;
     flex_eprintln!(quiet, "Completed clear.");
     Ok(())
+}
+
+pub async fn run(run_service_option: RunServiceOption) -> Result<()> {
+    let run_service = RunService::default();
+    run_service.run(run_service_option).await
 }
