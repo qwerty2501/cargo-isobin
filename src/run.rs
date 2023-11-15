@@ -7,10 +7,11 @@ use tokio::process::Command;
 
 use crate::{
     bin_map::BinMap,
+    flex_eprintln,
     manifest::{IsobinManifest, IsobinManifestCache},
     paths::{
         isobin_manifest::{isobin_manifest_dir, isobin_manifest_path_canonicalize},
-        workspace::WorkspaceProvider,
+        workspace::{Workspace, WorkspaceProvider},
     },
     InstallMode, Result, SpecifiedTarget,
 };
@@ -41,6 +42,7 @@ impl RunService {
                     bin_dependency.name(),
                 ) {
                     self.install_and_run(
+                        &workspace,
                         SpecifiedTarget::new(
                             Some(bin_dependency.provider_kind().clone()),
                             bin_dependency.name().to_string(),
@@ -49,7 +51,7 @@ impl RunService {
                     )
                     .await
                 } else {
-                    self.run_command(run_service_option).await
+                    self.run_command(&workspace, run_service_option).await
                 }
             } else {
                 Err(RunServiceError::new_not_found_bin_dependency(
@@ -59,6 +61,7 @@ impl RunService {
             }
         } else if isobin_manifest.exists_name(run_service_option.bin()) {
             self.install_and_run(
+                &workspace,
                 SpecifiedTarget::new(None, run_service_option.bin().to_string()),
                 run_service_option,
             )
@@ -72,9 +75,14 @@ impl RunService {
     }
     async fn install_and_run(
         &self,
+        workspace: &Workspace,
         specified_target: SpecifiedTarget,
         run_service_option: FixedRunServiceOption,
     ) -> Result<()> {
+        flex_eprintln!(
+            run_service_option.quiet,
+            "ditected difference from current manifest"
+        );
         crate::install(
             crate::InstallServiceOptionBuilder::default()
                 .isobin_manifest_path(run_service_option.isobin_manifest_path().into())
@@ -84,19 +92,32 @@ impl RunService {
                 .build(),
         )
         .await?;
-        self.run_command(run_service_option).await
+        self.run_command(workspace, run_service_option).await
     }
 
-    async fn run_command(&self, run_service_option: FixedRunServiceOption) -> Result<()> {
-        let status = Command::new(run_service_option.bin())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .status()
-            .await?;
-        if status.success() {
-            Ok(())
+    async fn run_command(
+        &self,
+        workspace: &Workspace,
+        run_service_option: FixedRunServiceOption,
+    ) -> Result<()> {
+        let bin_file_path = workspace.bin_dir().join(run_service_option.bin());
+        if bin_file_path.exists() && bin_file_path.is_file() {
+            let status = Command::new(bin_file_path)
+                .args(run_service_option.args())
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .status()
+                .await?;
+            if status.success() {
+                Ok(())
+            } else {
+                Err(RunServiceError::new_run_failed(status).into())
+            }
         } else {
-            Err(RunServiceError::new_run_failed(status).into())
+            Err(
+                RunServiceError::new_not_found_bin_file(run_service_option.bin().to_string())
+                    .into(),
+            )
         }
     }
 }
@@ -105,6 +126,8 @@ impl RunService {
 pub enum RunServiceError {
     #[error("not found {bin} dependency in isobin manifest")]
     NotFoundBinDependency { bin: String },
+    #[error("not found {bin} file in bin dir")]
+    NotFoundBinFile { bin: String },
     #[error("")]
     RunFailed { status: ExitStatus },
 }

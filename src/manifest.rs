@@ -153,8 +153,8 @@ impl IsobinManifest {
         match provider_kind {
             ProviderKind::Cargo => {
                 let self_dependency = self.cargo().dependencies().get(name.as_ref());
-                self_dependency.is_some()
-                    && self_dependency == other.cargo().dependencies().get(name.as_ref())
+                self_dependency.is_none()
+                    || self_dependency != other.cargo().dependencies().get(name.as_ref())
             }
         }
     }
