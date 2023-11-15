@@ -144,17 +144,18 @@ impl IsobinManifest {
         self.cargo().dependencies().contains_key(name.as_ref())
     }
 
-    pub fn ditect_difference(
+    pub async fn ditect_difference(
         &self,
         other: &Self,
         provider_kind: &ProviderKind,
         name: impl AsRef<str>,
-    ) -> bool {
+        workspace: &Workspace,
+    ) -> Result<bool> {
         match provider_kind {
             ProviderKind::Cargo => {
-                let self_dependency = self.cargo().dependencies().get(name.as_ref());
-                self_dependency.is_none()
-                    || self_dependency != other.cargo().dependencies().get(name.as_ref())
+                self.cargo()
+                    .ditect_difference(other.cargo(), name.as_ref(), workspace)
+                    .await
             }
         }
     }

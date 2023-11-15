@@ -36,11 +36,15 @@ impl RunService {
             if isobin_manifest.exists_name(bin_dependency.name()) {
                 let isobin_cache =
                     IsobinManifestCache::lenient_load_cache_from_dir(workspace.base_dir()).await;
-                if isobin_manifest.ditect_difference(
-                    &isobin_cache,
-                    bin_dependency.provider_kind(),
-                    bin_dependency.name(),
-                ) {
+                if isobin_manifest
+                    .ditect_difference(
+                        &isobin_cache,
+                        bin_dependency.provider_kind(),
+                        bin_dependency.name(),
+                        &workspace,
+                    )
+                    .await?
+                {
                     self.install_and_run(
                         &workspace,
                         SpecifiedTarget::new(

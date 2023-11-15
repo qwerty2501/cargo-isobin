@@ -63,6 +63,25 @@ impl CargoManifest {
         Ok(new_cargo_manifest)
     }
 
+    pub async fn ditect_difference(
+        &self,
+        other: &Self,
+        name: &str,
+        workspace: &Workspace,
+    ) -> Result<bool> {
+        let cargo_workspace = CargoWorkspace::from_workspace(workspace);
+        if let Some(dependency) = self.dependencies().get(name) {
+            if let Some(other_dependency) = other.dependencies().get(name) {
+                Ok(dependency != other_dependency
+                    || Self::check_need_build_in_path(name, dependency, &cargo_workspace).await?)
+            } else {
+                Ok(true)
+            }
+        } else {
+            Ok(false)
+        }
+    }
+
     async fn check_need_build_in_path(
         name: &str,
         dependency: &CargoInstallDependency,
