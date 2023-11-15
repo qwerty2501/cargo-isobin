@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use isobin::{print_error, *};
 use std::{path::PathBuf, process::exit};
 
@@ -24,27 +24,48 @@ impl Application {
         let subcommand = args.subcommand;
         match subcommand {
             SubCommands::Install {
+                base_options,
                 force,
                 cargo_install_targets,
                 install_targets,
             } => {
                 self.install(
-                    args.manifest_path,
-                    args.quiet,
+                    base_options.manifest_path,
+                    base_options.quiet,
                     force,
                     cargo_install_targets,
                     install_targets,
                 )
                 .await
             }
-            SubCommands::Path => self.path(args.manifest_path, args.quiet).await,
-            SubCommands::Sync { force } => self.sync(args.manifest_path, args.quiet, force).await,
-            SubCommands::Clean => self.clean(args.manifest_path, args.quiet).await,
+            SubCommands::Path { base_options } => {
+                self.path(base_options.manifest_path, base_options.quiet)
+                    .await
+            }
+            SubCommands::Sync {
+                base_options,
+                force,
+            } => {
+                self.sync(base_options.manifest_path, base_options.quiet, force)
+                    .await
+            }
+            SubCommands::Clean { base_options } => {
+                self.clean(base_options.manifest_path, base_options.quiet)
+                    .await
+            }
             SubCommands::Run {
-                quiet,
+                base_options,
                 bin,
                 arguments,
-            } => self.run(args.manifest_path, quiet, bin, arguments).await,
+            } => {
+                self.run(
+                    base_options.manifest_path,
+                    base_options.quiet,
+                    bin,
+                    arguments,
+                )
+                .await
+            }
         }
     }
     async fn install(
@@ -149,11 +170,6 @@ impl Application {
 #[derive(Parser)]
 #[command(author, version, about)]
 pub struct Arguments {
-    /// Sets a custom manifest file
-    #[arg(long, value_name = "PATH",value_hint = clap::ValueHint::FilePath)]
-    manifest_path: Option<PathBuf>,
-    #[arg(long, short, default_value_t = false)]
-    quiet: bool,
     #[command(subcommand)]
     subcommand: SubCommands,
 }
@@ -161,22 +177,41 @@ pub struct Arguments {
 #[derive(Subcommand)]
 pub enum SubCommands {
     Install {
+        #[command(flatten)]
+        base_options: BaseOptions,
         #[arg(short, long, default_value_t = false)]
         force: bool,
         #[arg(long = "cargo")]
         cargo_install_targets: Option<Vec<String>>,
         install_targets: Option<Vec<String>>,
     },
-    Path,
+    Path {
+        #[command(flatten)]
+        base_options: BaseOptions,
+    },
     Sync {
+        #[command(flatten)]
+        base_options: BaseOptions,
         #[arg(short, long, default_value_t = false)]
         force: bool,
     },
-    Clean,
+    Clean {
+        #[command(flatten)]
+        base_options: BaseOptions,
+    },
     Run {
-        #[arg(long, short, default_value_t = false)]
-        quiet: bool,
+        #[command(flatten)]
+        base_options: BaseOptions,
         bin: String,
         arguments: Option<Vec<String>>,
     },
+}
+
+#[derive(Args)]
+pub struct BaseOptions {
+    /// Sets a custom manifest file
+    #[arg(long, value_name = "PATH",value_hint = clap::ValueHint::FilePath)]
+    manifest_path: Option<PathBuf>,
+    #[arg(long, short, default_value_t = false)]
+    quiet: bool,
 }
