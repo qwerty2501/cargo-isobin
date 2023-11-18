@@ -111,6 +111,8 @@ impl providers::CoreInstaller for CargoCoreInstaller {
         let mut command = Command::new(PROVIDER_NAME);
         let mut args: Vec<String> = vec![
             "--quiet".into(),
+            "--color".into(),
+            "always".into(),
             "install".into(),
             "--force".into(),
             "--root".into(),

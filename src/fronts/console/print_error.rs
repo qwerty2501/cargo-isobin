@@ -1,6 +1,6 @@
 use colored::Colorize;
 
-use crate::{install::InstallServiceError, Error, IsobinManifestError};
+use crate::{install::InstallServiceError, Error, IsobinManifestError, ProviderKind};
 pub fn print_error(err: &Error) {
     match err.downcast_ref::<InstallServiceError>() {
         Some(InstallServiceError::MultiInstall(errs)) => {
@@ -14,8 +14,12 @@ pub fn print_error(err: &Error) {
             error_message,
             error: _,
         }) => {
-            eprintln!("An error occurred in {provider}/{name}.");
-            eprintln!("{}", error_message.red());
+            eprintln!(
+                "An error occurred in {}/{}.",
+                provider.to_string().red(),
+                name.red()
+            );
+            print_provider_error(provider, error_message);
         }
         _ => match err.downcast_ref::<IsobinManifestError>() {
             Some(IsobinManifestError::MultiValidate(errs)) => {
@@ -28,12 +32,22 @@ pub fn print_error(err: &Error) {
                 name,
                 error,
             }) => {
-                eprintln!("Invalid config value in {provider}/{name}.");
+                eprintln!(
+                    "Invalid config value in {}/{}.",
+                    provider.to_string().red(),
+                    name.red()
+                );
                 eprintln!("{}", error.to_string().red());
             }
             _ => {
                 eprintln!("{}", err.to_string().red());
             }
         },
+    }
+}
+
+fn print_provider_error(provider: &ProviderKind, message: &str) {
+    match provider {
+        ProviderKind::Cargo => eprintln!("{message}"),
     }
 }
