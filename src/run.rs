@@ -93,6 +93,7 @@ impl RunService {
                 .mode(InstallMode::SpecificInstallTargetsOnly {
                     specified_install_targets: vec![specified_target],
                 })
+                .quiet(*run_service_option.quiet())
                 .build(),
         )
         .await?;
@@ -108,6 +109,7 @@ impl RunService {
         if bin_file_path.exists() && bin_file_path.is_file() {
             let status = Command::new(bin_file_path)
                 .args(run_service_option.args())
+                .stdin(Stdio::inherit())
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .status()
