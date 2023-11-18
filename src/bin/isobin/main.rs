@@ -27,21 +27,6 @@ impl Application {
     pub async fn exec(&self, args: Arguments) -> Result<()> {
         let subcommand = args.subcommand;
         match subcommand {
-            SubCommands::Install {
-                base_options,
-                force,
-                cargo_install_targets,
-                install_targets,
-            } => {
-                self.install(
-                    base_options.manifest_path,
-                    base_options.quiet,
-                    force,
-                    cargo_install_targets,
-                    install_targets,
-                )
-                .await
-            }
             SubCommands::Path { base_options } => {
                 self.path(base_options.manifest_path, base_options.quiet)
                     .await
@@ -72,45 +57,7 @@ impl Application {
             }
         }
     }
-    async fn install(
-        &self,
-        isobin_manifest_path: Option<PathBuf>,
-        quiet: bool,
-        force: bool,
-        cargo_install_targets: Option<Vec<String>>,
-        install_targets: Option<Vec<String>>,
-    ) -> Result<()> {
-        let mut targets = vec![];
-        if let Some(cargo_install_targets) = cargo_install_targets {
-            for target in cargo_install_targets.into_iter() {
-                targets.push(SpecifiedTarget::new(Some(ProviderKind::Cargo), target));
-            }
-        }
-        if let Some(install_targets) = install_targets {
-            for target in install_targets.into_iter() {
-                targets.push(SpecifiedTarget::new(None, target));
-            }
-        }
 
-        let install_service_option_builder = InstallServiceOptionBuilder::default()
-            .quiet(quiet)
-            .mode(if !targets.is_empty() {
-                InstallMode::SpecificInstallTargetsOnly {
-                    specified_install_targets: targets,
-                }
-            } else {
-                InstallMode::All
-            })
-            .force(force);
-        let install_service_option_builder =
-            if let Some(isobin_manifest_path) = isobin_manifest_path {
-                install_service_option_builder.isobin_manifest_path(isobin_manifest_path)
-            } else {
-                install_service_option_builder
-            };
-
-        install(install_service_option_builder.build()).await
-    }
     async fn path(&self, isobin_manifest_path: Option<PathBuf>, quiet: bool) -> Result<()> {
         let path_service_option_builder = PathServiceOptionBuilder::default().quiet(quiet);
         let path_service_option_builder = if let Some(isobin_manifest_path) = isobin_manifest_path {
@@ -180,15 +127,6 @@ pub struct Arguments {
 
 #[derive(Subcommand)]
 pub enum SubCommands {
-    Install {
-        #[command(flatten)]
-        base_options: BaseOptions,
-        #[arg(short, long, default_value_t = false)]
-        force: bool,
-        #[arg(long = "cargo")]
-        cargo_install_targets: Option<Vec<String>>,
-        install_targets: Option<Vec<String>>,
-    },
     Path {
         #[command(flatten)]
         base_options: BaseOptions,

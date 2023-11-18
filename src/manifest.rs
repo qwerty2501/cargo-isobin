@@ -249,7 +249,7 @@ enum ManifestFileExtensions {
 pub struct IsobinManifestCache;
 
 impl IsobinManifestCache {
-    const ISOBIN_CONFIG_FILE_CACHE_NAME: &str = "isobin_cache.v1.json";
+    const ISOBIN_CONFIG_FILE_CACHE_NAME: &'static str = "isobin_cache.v1.json";
     fn make_cache_path(dir: impl AsRef<Path>) -> PathBuf {
         dir.as_ref().join(Self::ISOBIN_CONFIG_FILE_CACHE_NAME)
     }

@@ -10,7 +10,7 @@ pub struct BinMap {
 }
 
 impl BinMap {
-    const BIN_MAP_FILE_NAME: &str = "bin_map.v1.json";
+    const BIN_MAP_FILE_NAME: &'static str = "bin_map.v1.json";
     pub fn insert(
         &mut self,
         file_name: String,
