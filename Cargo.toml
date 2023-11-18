@@ -36,3 +36,7 @@ rstest = "0.12.0"
 [[bin]]
 name = "isobin"
 path = "src/bin/isobin/main.rs"
+
+[[bin]]
+name = "isx"
+path = "src/bin/isx/main.rs"
