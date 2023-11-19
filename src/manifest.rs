@@ -303,13 +303,15 @@ impl IsobinManifestCache {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use crate::utils::io_ext;
 
     use super::*;
     use anyhow::anyhow;
+    use cargo::util::PartialVersion;
     use providers::cargo::{CargoInstallDependency, CargoInstallDependencyDetail};
 
-    use semver::Version;
     use utils::serde_ext::{ErrorHint, SerdeExtError};
 
     #[rstest]
@@ -397,11 +399,11 @@ mod tests {
         [
             (
                 "comrak",
-                CargoInstallDependency::Simple(Version::parse("1.0.0").unwrap()),
+                CargoInstallDependency::Simple(PartialVersion::from_str("1.0.0").unwrap()),
             ),
             (
                 "cargo-make",
-                CargoInstallDependency::Simple(Version::parse("2.0.0").unwrap()),
+                CargoInstallDependency::Simple(PartialVersion::from_str("2.0.0").unwrap()),
             ),
         ]
         .into_iter()
@@ -424,7 +426,7 @@ mod tests {
         let mut cargos = vec![];
         let comrak_dependency_detail = CargoInstallDependencyDetail::new(
             Default::default(),
-            Some(Version::parse("1.0.0").unwrap()),
+            Some(PartialVersion::from_str("1.0.0").unwrap()),
             Default::default(),
             Default::default(),
             Default::default(),
@@ -444,7 +446,7 @@ mod tests {
 
         let cargo_make_dependency_detail = CargoInstallDependencyDetail::new(
             Default::default(),
-            Some(Version::parse("2.0.0").unwrap()),
+            Some(PartialVersion::from_str("2.0.0").unwrap()),
             Default::default(),
             Default::default(),
             Default::default(),

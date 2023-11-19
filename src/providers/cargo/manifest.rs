@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::anyhow;
-use semver::Version;
+use cargo::util::PartialVersion;
 use serde_derive::{Deserialize, Serialize};
 use tokio::fs;
 
@@ -163,7 +163,7 @@ impl Manifest for CargoManifest {
 #[serde(untagged)]
 #[allow(clippy::large_enum_variant)]
 pub enum CargoInstallDependency {
-    Simple(Version),
+    Simple(PartialVersion),
     Detailed(CargoInstallDependencyDetail),
 }
 
@@ -187,7 +187,7 @@ impl CargoInstallDependency {
 #[derive(Debug, Clone, PartialEq, Default, Serialize, new, Deserialize, Getters)]
 pub struct CargoInstallDependencyDetail {
     bins: Option<Vec<String>>,
-    version: Option<Version>,
+    version: Option<PartialVersion>,
     registry: Option<String>,
     index: Option<String>,
     path: Option<PathBuf>,
@@ -222,7 +222,7 @@ impl CargoInstallDependencyDetail {
         }
     }
 
-    pub fn from_version(version: impl Into<Version>) -> Self {
+    pub fn from_version(version: impl Into<PartialVersion>) -> Self {
         Self {
             version: Some(version.into()),
             ..Default::default()
