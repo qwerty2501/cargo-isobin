@@ -21,7 +21,10 @@ use crate::{
 use super::home::CargoWorkspace;
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, new, Default, Getters)]
 pub struct CargoManifest {
-    #[serde(serialize_with = "toml::ser::tables_last")]
+    #[serde(
+        serialize_with = "toml::ser::tables_last",
+        skip_serializing_if = "HashMap::<String, CargoInstallDependency>::is_empty"
+    )]
     dependencies: HashMap<String, CargoInstallDependency>,
 }
 

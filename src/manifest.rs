@@ -18,7 +18,7 @@ use serde_derive::{Deserialize, Serialize};
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Getters, Default, new)]
 pub struct IsobinManifest {
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "CargoManifest::is_empty")]
     cargo: CargoManifest,
 }
 
@@ -58,6 +58,15 @@ impl IsobinManifest {
         let isobin_manifest = isobin_manifest.fix(isobin_manifest_dir);
         isobin_manifest.validate()?;
         Ok(isobin_manifest)
+    }
+
+    #[allow(dead_code)]
+    pub async fn save_to_file(
+        isobin_manifest: &IsobinManifest,
+        path: impl AsRef<Path>,
+    ) -> Result<()> {
+        let file_extension = Self::get_file_extension(path.as_ref())?;
+        Self::save(isobin_manifest, file_extension, path).await
     }
 
     pub fn is_empty(&self) -> bool {
@@ -177,6 +186,18 @@ impl IsobinManifest {
             ManifestFileExtensions::Json => Ok(Json::parse_from_file(path).await?),
         }
     }
+    async fn save(
+        isobin_manifest: &IsobinManifest,
+        file_extension: ManifestFileExtensions,
+        path: impl AsRef<Path>,
+    ) -> Result<()> {
+        match file_extension {
+            ManifestFileExtensions::Toml => Ok(Toml::save_to_file(isobin_manifest, path).await?),
+            ManifestFileExtensions::Yaml => Ok(Yaml::save_to_file(isobin_manifest, path).await?),
+            ManifestFileExtensions::Json => Ok(Json::save_to_file(isobin_manifest, path).await?),
+        }
+    }
+
     pub async fn get_need_install_dependency_manifest(
         base: &Self,
         old: &Self,
@@ -203,6 +224,10 @@ impl IsobinManifest {
 pub trait Manifest: Clone {
     type Dependency: Clone;
     fn dependencies(&self) -> &HashMap<String, Self::Dependency>;
+
+    fn is_empty(&self) -> bool {
+        self.dependencies().is_empty()
+    }
 
     fn make_from_new_dependencies(&self, dependencies: HashMap<String, Self::Dependency>) -> Self;
 

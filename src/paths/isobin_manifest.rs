@@ -64,9 +64,10 @@ pub async fn search_isobin_manifest_path(current_dir: impl AsRef<Path>) -> Resul
         }
     }
 }
+pub const BASE_FILE_NAME: &str = "isobin";
 
-fn make_isobin_manifest_paths(dir: impl AsRef<Path>) -> Vec<PathBuf> {
-    let base_name = "isobin";
+pub fn make_isobin_manifest_paths(dir: impl AsRef<Path>) -> Vec<PathBuf> {
+    let base_name = BASE_FILE_NAME;
     let allow_isobin_manifest_extensions = ["toml", "yaml", "yml", "json"];
     let mut search_isobin_manifest_paths = vec![];
     for extension in allow_isobin_manifest_extensions.into_iter() {

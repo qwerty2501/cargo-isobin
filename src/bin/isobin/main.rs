@@ -55,6 +55,10 @@ impl Application {
                 )
                 .await
             }
+            SubCommands::Init { base_options } => {
+                self.init(base_options.manifest_path, base_options.quiet)
+                    .await
+            }
         }
     }
 
@@ -116,6 +120,15 @@ impl Application {
         };
         run(run_service_option_builder.build()).await
     }
+    async fn init(&self, isobin_manifest_path: Option<PathBuf>, quiet: bool) -> Result<()> {
+        let init_service_option_builder = InitServiceOptionBuilder::default().quiet(quiet);
+        let init_service_option_builder = if let Some(isobin_manifest_path) = isobin_manifest_path {
+            init_service_option_builder.isobin_manifest_path(isobin_manifest_path)
+        } else {
+            init_service_option_builder
+        };
+        init(init_service_option_builder.build()).await
+    }
 }
 
 #[derive(Parser)]
@@ -146,6 +159,10 @@ pub enum SubCommands {
         base_options: BaseOptions,
         bin: String,
         arguments: Option<Vec<String>>,
+    },
+    Init {
+        #[command(flatten)]
+        base_options: BaseOptions,
     },
 }
 

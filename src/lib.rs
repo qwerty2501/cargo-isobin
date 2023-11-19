@@ -8,6 +8,7 @@ mod bin_map;
 mod clearn;
 mod errors;
 mod fronts;
+mod init;
 mod install;
 mod macros;
 mod manifest;
@@ -34,6 +35,8 @@ pub use sync::{SyncServiceOption, SyncServiceOptionBuilder};
 use async_trait::async_trait;
 use clearn::*;
 pub use clearn::{CleanServiceOption, CleanServiceOptionBuilder};
+use init::*;
+pub use init::{InitServiceOption, InitServiceOptionBuilder};
 use manifest::*;
 pub use providers::ProviderKind;
 #[cfg(test)]
@@ -74,4 +77,9 @@ pub async fn clear(clean_service_option: CleanServiceOption) -> Result<()> {
 pub async fn run(run_service_option: RunServiceOption) -> Result<()> {
     let run_service = RunService::default();
     run_service.run(run_service_option).await
+}
+
+pub async fn init(init_service_option: InitServiceOption) -> Result<()> {
+    let init_service = InitService::default();
+    init_service.init(init_service_option).await
 }
